@@ -240,7 +240,20 @@
     exclusive(function () {
       var n = niveau.aleatoire ? TIRAGES : 1;
       var mondes = [];
-      for (var k = 0; k < n; k++) mondes.push(k === 0 ? mondeAffiche : niveau.monde(Jeu.hasard(graine())));
+      // terrains tous différents (tant que c'est possible) : pas de « coup de chance » avec un programme écrit par cœur
+      var cle = function (m) { return niveau.variante ? String(niveau.variante(m)) : JSON.stringify(m); };
+      var vus = {};
+      vus[cle(mondeAffiche)] = true;
+      mondes.push(mondeAffiche);
+      while (mondes.length < n) {
+        var m = null;
+        for (var essai = 0; essai < 200; essai++) {
+          m = niveau.monde(Jeu.hasard(graine()));
+          if (!vus[cle(m)]) break;
+        }
+        vus[cle(m)] = true;
+        mondes.push(m);
+      }
       var res = { resultats: {}, ok: false }, echec = null, derniere = null;
       var chain = Promise.resolve();
       mondes.forEach(function (m, k) {
