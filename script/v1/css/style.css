@@ -489,3 +489,7 @@ body.bac-a-sable .enonce h2 { display: none; }
 body.bac-a-sable .enonce { max-width: none; }
 body.bac-a-sable .editeur { margin-top: 4px; }
 body.bac-a-sable .feuille { aspect-ratio: auto; max-height: none; height: var(--hauteur-feuille, 520px); }
+
+/* Bac à sable Python pur (sans tortue) : grande console à droite */
+body.sans-tortue .zone-console.colonne { margin-top: 0; }
+body.bac-a-sable.sans-tortue .console { max-height: none; height: var(--hauteur-console, 480px); }

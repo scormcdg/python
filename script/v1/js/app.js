@@ -16,6 +16,7 @@
   var saveTimer = null;
   var errorLine = null;
   var drawing = null, figure = null;
+  var tortue = false;      // la page a-t-elle une feuille de dessin ? (non : bac à sable Python pur)
   var figureCache = {};
 
   var graded = SERIE.exercices.filter(function (e) { return e.note; });
@@ -105,10 +106,12 @@
 
     $("btn-verifier").hidden = !current.note;
     hideConsole();
-    drawing.draw({ path: [], x: 0, y: 0, heading: 0 });
-    $("btn-finir").hidden = true;
+    if (tortue) {
+      drawing.draw({ path: [], x: 0, y: 0, heading: 0 });
+      $("btn-finir").hidden = true;
+    }
     renderCriteria(null);
-    showFigure();
+    if (tortue) showFigure();
     saveSoon();
   }
 
@@ -252,6 +255,7 @@
   }
 
   function animate(snap) {
+    if (!tortue) return;
     $("btn-finir").hidden = false;
     drawing.draw(snap, { animate: true, onDone: function () { $("btn-finir").hidden = true; } });
   }
@@ -334,6 +338,14 @@
     var cm = editor.getWrapperElement();
     var haut = cm.getBoundingClientRect().top + window.scrollY;
     var actions = document.querySelector(".actions");
+    if (!tortue) {
+      // Python pur : éditeur à gauche, console à droite, tous deux jusqu'en bas
+      editor.setSize(null, Math.max(260, h - haut - (actions ? actions.offsetHeight + 24 : 80) - bas - 16));
+      var c = $("console");
+      var hautC = c.getBoundingClientRect().top + window.scrollY;
+      c.style.setProperty("--hauteur-console", Math.max(200, h - hautC - bas - 24) + "px");
+      return;
+    }
     var reserve = (actions ? actions.offsetHeight + 24 : 80) + 30 + 180 + bas + 16;
     editor.setSize(null, Math.max(260, h - haut - reserve));
     // dessin : jusqu'en bas de l'écran, sous la feuille il reste le réglage de la vitesse
@@ -462,7 +474,7 @@
     hideConsole();
     exclusive(function () {
       return PyEngine.run(code).then(function (r) {
-        animate(TurtleRec.snapshot());
+        if (tortue) animate(TurtleRec.snapshot());
         if (r.error) showError(r.error);
         else showOutput(r.output);
       });
@@ -505,8 +517,10 @@
     if (!window.confirm("Remplacer votre programme par le code de départ ? Votre travail sur cet exercice sera effacé.")) return;
     editor.setValue(current.code);
     hideConsole();
-    drawing.draw({ path: [], x: 0, y: 0, heading: 0 });
-    $("btn-finir").hidden = true;
+    if (tortue) {
+      drawing.draw({ path: [], x: 0, y: 0, heading: 0 });
+      $("btn-finir").hidden = true;
+    }
     renderCriteria(null);
   }
 
@@ -563,6 +577,9 @@
       ? "Votre travail est enregistré automatiquement dans Moodle."
       : "Mode test hors Moodle : votre travail est enregistré dans ce navigateur uniquement.";
 
+    tortue = !!$("canvas-tortue") && typeof TurtleCanvas === "function" && typeof TurtleRec !== "undefined";
+    if (!tortue) document.body.classList.add("sans-tortue");
+    if (tortue) {
     if (!(state.zoom > 0)) state.zoom = 1;
     drawing = new TurtleCanvas($("canvas-tortue"), {
       margin: 28, getSpeed: sliderSpeed,
@@ -582,6 +599,7 @@
     });
     $("btn-finir").addEventListener("click", function () { drawing.finish(); });
     figure = new TurtleCanvas($("canvas-figure"), { fit: true, turtle: false, origin: false, margin: 14 });
+    }
     boutonPleinEcran();
 
     editor = CodeMirror($("editeur"), {
@@ -630,6 +648,7 @@
     window.addEventListener("resize", function () {
       clearTimeout(resizeTimer);
       resizeTimer = setTimeout(function () {
+        if (!tortue) return;
         if (!busy && drawing.last && !drawing.animating()) drawing.draw(drawing.last);
         if (figure.last && !$("figure-attendue").hidden) figure.draw(figure.last);
       }, 150);
