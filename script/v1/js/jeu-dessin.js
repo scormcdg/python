@@ -45,11 +45,11 @@
     var n = monde.sol.length;
     var haut = 0;
     for (var i = 0; i < n; i++) haut = Math.max(haut, monde.sol[i] + (monde.caisses[i] || 0));
-    var lignes = haut + 3.2;
+    var lignes = haut + 4.2; // + une rangée de pavés sous le niveau 0
     var cote = Math.min((w - 16) / n, (h - 12) / lignes);
     this.ctx = ctx; this.w = w; this.h = h; this.cote = cote;
     this.ox = (w - cote * n) / 2;
-    this.sol0 = h - 6; // bas du terrain
+    this.sol0 = h - 6 - cote; // niveau 0 (une rangée de pavés en dessous)
   };
 
   DessinJeu.prototype.px = function (x) { return this.ox + (x + 0.5) * this.cote; };       // centre de la colonne
@@ -89,16 +89,18 @@
     for (var x = 0; x < monde.sol.length; x++) {
       var hx = monde.sol[x], left = this.ox + x * c;
       // colonne de terre, marches visibles
-      for (k = 0; k < hx; k++) {
+      // une case = un pavé (la rangée k = -1 est sous le niveau 0, pour qu'on voie les cases même sur du plat)
+      for (k = -1; k < hx; k++) {
         ctx.fillStyle = (k + x) % 2 ? COULEURS.terre : COULEURS.terreFonce;
         ctx.fillRect(left, this.py(k + 1), c + 0.5, c + 0.5);
+        ctx.strokeStyle = "rgba(60,35,15,0.35)";
+        ctx.lineWidth = 1;
+        ctx.strokeRect(left + 0.5, this.py(k + 1) + 0.5, c - 1, c - 1);
       }
-      // bande d'herbe
+      // bande d'herbe, une touffe par case
+      var eh = Math.max(3, c * 0.12);
       ctx.fillStyle = COULEURS.herbe;
-      ctx.fillRect(left, this.py(hx) - Math.max(3, c * 0.12), c + 0.5, Math.max(3, c * 0.12));
-      // repère de hauteur discret
-      ctx.fillStyle = "rgba(29,43,83,0.08)";
-      ctx.fillRect(left, this.py(hx), 1, hx * c);
+      ctx.fillRect(left + 1, this.py(hx) - eh, c - 2, eh);
     }
     this.objets(monde, s);
   };
@@ -134,7 +136,7 @@
         ctx.moveTo(cx + c * 0.42, top); ctx.lineTo(cx - c * 0.42, top + c * 0.86);
         ctx.stroke();
       }
-      if (s.objets[x] === "cle") this.dessinerCle(cx, base - c * 0.5, c * 0.5);
+      if (s.objets[x] === "cle") this.dessinerCle(cx, base - c * 0.5 - n * c * 0.9, c * 0.5); // au-dessus des caisses
       if (s.objets[x] === "coffre" || monde.objets[x] === "coffre") this.dessinerCoffre(cx, base, c, s.ouvert);
     }
   };
