@@ -469,7 +469,8 @@
 
     if (/TimeLimitError/.test(raw)) {
       msg = "Le programme met trop de temps à s'exécuter : y a-t-il une boucle qui ne s'arrête jamais ?";
-    } else if (/La tortue|attend un nombre|Couleur invalide|entre les parenthèses|Robi /.test(raw)) {
+    } else if (/La tortue|attend un nombre|Couleur invalide|entre les parenthèses/.test(raw) ||
+               (global.Jeu && /^RuntimeError: Robi /.test(raw))) { // messages du jeu Robi (seulement si jeu.js est chargé)
       msg = detail.replace(/^\w+Error:\s*/, "") + where + ".";
     } else if ((m = raw.match(/NameError: name '(\w+)' is not defined/))) {
       msg = nameErrorMessage(m[1], line, code);
