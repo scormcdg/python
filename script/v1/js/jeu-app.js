@@ -16,7 +16,7 @@
 
   var DESCRIPTIONS = {
     avancer: "avancer() : Robi avance d'une case (il peut descendre une marche, pas en monter)",
-    sauter: "sauter(n) : Robi saute sur la case suivante, qui doit être exactement n marches plus haut ; sauter() = sauter(1)",
+    sauter: "sauter(n) : Robi saute sur la case suivante, qui doit être exactement n marches plus haut ; sauter() = sauter(1), qui marche aussi sur du plat",
     demi_tour: "demi_tour() : Robi se retourne",
     frapper: "frapper() : Robi casse une caisse juste devant lui",
     ouvrir: "ouvrir() : Robi ouvre le coffre sur lequel il se trouve (il lui faut la clé)",
