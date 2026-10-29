@@ -48,16 +48,21 @@
     var margin = this.opts.margin || 28;
     var fitW = (w - 2 * margin) / Math.max(maxX - minX, 1);
     var fitH = (h - 2 * margin) / Math.max(maxY - minY, 1);
-    var k = this.opts.fit ? Math.min(fitW, fitH) : Math.min(1, fitW, fitH);
-    var cx = (minX + maxX) / 2, cy = (minY + maxY) / 2;
-    var zoom = this.opts.getZoom ? this.opts.getZoom() : 1;
-    if (!this.opts.fit && k === 1 && zoom <= 1 &&
-        Math.max(Math.abs(minX), Math.abs(maxX)) * 2 < w - 2 * margin &&
-        Math.max(Math.abs(minY), Math.abs(maxY)) * 2 < h - 2 * margin) {
-      cx = 0; cy = 0; // le dessin tient : l'origine reste au centre
+    var k, cx, cy;
+    if (this.opts.fit) {
+      // figure attendue : le dessin remplit la vignette
+      k = Math.min(fitW, fitH);
+      cx = (minX + maxX) / 2; cy = (minY + maxY) / 2;
+    } else {
+      // feuille de l'élève : l'origine (0, 0) reste toujours au centre, comme dans Python ;
+      // un dessin trop grand est réduit autour de ce centre
+      var demiW = Math.max(Math.abs(minX), Math.abs(maxX), 1);
+      var demiH = Math.max(Math.abs(minY), Math.abs(maxY), 1);
+      k = Math.min(1, (w / 2 - margin) / demiW, (h / 2 - margin) / demiH);
+      cx = 0; cy = 0;
+      // zoom choisi par l'élève (boutons + et −), autour du centre
+      k *= this.opts.getZoom ? this.opts.getZoom() : 1;
     }
-    // zoom choisi par l'élève (boutons + et −) ; en zoomant, la vue est centrée sur le dessin
-    k *= zoom;
     this.ctx = ctx; this.w = w; this.h = h; this.k = k; this.dpr = dpr;
     this.tx = function (x) { return w / 2 + (x - cx) * k; };
     this.ty = function (y) { return h / 2 - (y - cy) * k; };

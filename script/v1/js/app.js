@@ -265,7 +265,7 @@
   }
 
   function nombre(x) {
-    var r = Math.round(x * 100) / 100;
+    var r = Math.round(x * 10) / 10;
     return String(r).replace(".", ",");
   }
 
@@ -273,8 +273,8 @@
     var e = $("echelle");
     if (!e) return;
     var px = unite * k;
-    e.textContent = "forward(" + unite + ") = " + nombre(px) + " pixel" + (px >= 2 ? "s" : "");
-    e.title = "Un carreau. Zoom " + Math.round((state.zoom || 1) * 100) + " %";
+    e.textContent = "1 carreau = forward(" + unite + ") = " + nombre(px) + " pixel" + (px >= 2 ? "s" : "");
+    e.title = "Zoom " + Math.round((state.zoom || 1) * 100) + " %";
 
   }
 
