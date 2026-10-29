@@ -311,7 +311,7 @@
   /* Nom proche (majuscules ou une lettre de différence) parmi ceux du programme et de Python. */
   function similarName(name, code) {
     var own = (code || "").replace(STRING_RE, '""').replace(/#.*$/gm, "").match(/[A-Za-z_\u00C0-\u024F][\w\u00C0-\u024F]*/g) || [];
-    var pool = KNOWN_NAMES.concat(own).filter(function (x, i, arr) { return x !== name && arr.indexOf(x) === i && !KEYWORDS.test(x); });
+    var pool = KNOWN_NAMES.concat(global.EXTRA_KNOWN_NAMES || [], own).filter(function (x, i, arr) { return x !== name && arr.indexOf(x) === i && !KEYWORDS.test(x); });
     for (var i = 0; i < pool.length; i++) {
       if (pool[i].toLowerCase() === name.toLowerCase()) return pool[i];
     }
@@ -469,7 +469,7 @@
 
     if (/TimeLimitError/.test(raw)) {
       msg = "Le programme met trop de temps à s'exécuter : y a-t-il une boucle qui ne s'arrête jamais ?";
-    } else if (/La tortue|attend un nombre|Couleur invalide|entre les parenthèses/.test(raw)) {
+    } else if (/La tortue|attend un nombre|Couleur invalide|entre les parenthèses|Robi /.test(raw)) {
       msg = detail.replace(/^\w+Error:\s*/, "") + where + ".";
     } else if ((m = raw.match(/NameError: name '(\w+)' is not defined/))) {
       msg = nameErrorMessage(m[1], line, code);
