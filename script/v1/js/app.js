@@ -272,8 +272,10 @@
   function afficherEchelle(unite, k) {
     var e = $("echelle");
     if (!e) return;
-    e.textContent = "1 carreau = forward(" + unite + ") · 1 pas = " + nombre(k) + " pixel" + (k >= 2 ? "s" : "");
-    e.title = "Zoom " + Math.round((state.zoom || 1) * 100) + " %";
+    var px = unite * k;
+    e.textContent = "forward(" + unite + ") = " + nombre(px) + " pixel" + (px >= 2 ? "s" : "");
+    e.title = "Un carreau. Zoom " + Math.round((state.zoom || 1) * 100) + " %";
+
   }
 
   function outilsDessin() {
