@@ -41,6 +41,12 @@
   }
 
   function updateResult() {
+    if (!graded.length) {
+      // bac à sable : pas de note, l'activité est simplement terminée
+      Scorm.setCompleted();
+      $("progression").textContent = "";
+      return;
+    }
     var s = score();
     Scorm.setResult(s.pct, s.n === s.total);
     $("progression").innerHTML = s.n === s.total
@@ -254,6 +260,71 @@
    * Bouton dans le coin de la feuille : met le dessin seul en plein écran.
    * Caché si le navigateur ou Moodle ne permet pas le plein écran.
    */
+  /* ---------- Fichiers .py : ouvrir et enregistrer (bac à sable) ---------- */
+
+  function boutonsFichiers() {
+    var actions = document.querySelector(".actions");
+    if (!actions) return;
+    var nom = "programme.py";
+
+    var entree = document.createElement("input");
+    entree.type = "file";
+    entree.accept = ".py,text/x-python,text/plain";
+    entree.hidden = true;
+
+    var ouvrir = document.createElement("button");
+    ouvrir.type = "button";
+    ouvrir.id = "btn-ouvrir";
+    ouvrir.className = "bouton secondaire";
+    ouvrir.textContent = "Ouvrir un .py";
+
+    var enregistrer = document.createElement("button");
+    enregistrer.type = "button";
+    enregistrer.id = "btn-enregistrer";
+    enregistrer.className = "bouton secondaire";
+    enregistrer.textContent = "Enregistrer en .py";
+
+    var ref = $("btn-recommencer");
+    actions.insertBefore(entree, ref);
+    actions.insertBefore(ouvrir, ref);
+    actions.insertBefore(enregistrer, ref);
+
+    ouvrir.addEventListener("click", function () { if (!busy) entree.click(); });
+    entree.addEventListener("change", function () {
+      var f = entree.files && entree.files[0];
+      entree.value = "";
+      if (!f) return;
+      if (f.size > 500000) {
+        showError({ message: "Ce fichier est trop grand (" + Math.round(f.size / 1000) + " ko) pour un programme Python." });
+        return;
+      }
+      var lecteur = new FileReader();
+      lecteur.onload = function () {
+        nom = f.name;
+        // setValue garde l'historique : Ctrl+Z revient au programme précédent
+        editor.setValue(String(lecteur.result).replace(/\r\n?/g, "\n"));
+        hideConsole();
+        var c = $("console");
+        c.className = "console vide";
+        c.textContent = "Fichier « " + nom + " » ouvert. Ctrl+Z (ou Cmd+Z) pour revenir au programme précédent.";
+      };
+      lecteur.onerror = function () { showError({ message: "Impossible de lire le fichier « " + f.name + " »." }); };
+      lecteur.readAsText(f, "utf-8");
+    });
+
+    enregistrer.addEventListener("click", function () {
+      var texte = editor.getValue();
+      if (!/\n$/.test(texte)) texte += "\n";
+      var blob = new Blob([texte], { type: "text/x-python;charset=utf-8" });
+      var a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = /\.py$/i.test(nom) ? nom : nom + ".py";
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+    });
+  }
+
   /* ---------- Outils du dessin : zoom (− +), échelle, plein écran ---------- */
 
   var ZOOMS = [0.25, 0.5, 0.75, 1, 1.5, 2, 3, 4, 6, 8];
@@ -532,6 +603,9 @@
         if (figure.last && !$("figure-attendue").hidden) figure.draw(figure.last);
       }, 150);
     });
+
+    if (SERIE.fichiers) boutonsFichiers();
+    if (SERIE.exercices.length === 1) $("onglets").hidden = true;
 
     updateResult();
     show(state.courant);

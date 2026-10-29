@@ -480,3 +480,6 @@ code, kbd { font-family: var(--police-code); font-size: 0.9em; }
 }
 .plein-ecran:hover { background: #f0f4fc; }
 body.en-plein-ecran { min-height: 100vh; overflow: auto; }
+
+/* Bac à sable : une seule page, pas de barre d'onglets */
+.onglets[hidden] { display: none; }

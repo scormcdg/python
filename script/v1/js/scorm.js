@@ -117,6 +117,11 @@
       set(p + "result", o.correct ? "correct" : "incorrect");
     },
 
+    /* Activité sans note (bac à sable) : simplement « terminée ». */
+    setCompleted: function () {
+      set("cmi.completion_status", "completed");
+    },
+
     commit: commit,
 
     finish: function () {
