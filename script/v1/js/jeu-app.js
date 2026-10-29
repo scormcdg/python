@@ -18,11 +18,11 @@
     avancer: "avancer() : Robi avance d'une case (il peut descendre une marche, pas en monter)",
     sauter: "sauter(n) : Robi saute sur la case suivante, qui doit être exactement n marches plus haut ; sauter() = sauter(1), qui marche aussi sur du plat",
     demi_tour: "demi_tour() : Robi se retourne",
-    frapper: "frapper() : Robi casse une caisse juste devant lui",
+    frapper: "frapper() : Robi casse une caisse juste devant lui (on ne peut pas sauter par-dessus)",
     ouvrir: "ouvrir() : Robi ouvre le coffre quand il est dessus : il faut d'abord aller sur la case du coffre (avec avancer(), il lui faut aussi la clé)",
     lire_nombre: "lire_nombre() : donne le nombre écrit sur le panneau où se trouve Robi",
     lire_mot: "lire_mot() : donne le mot écrit sur le panneau où se trouve Robi",
-    hauteur_devant: "hauteur_devant() : donne la hauteur de la marche devant Robi (0 si c'est plat, négatif si ça descend)",
+    hauteur_devant: "hauteur_devant() : donne la hauteur de la marche devant Robi (0 si c'est plat, négatif si ça descend ; les caisses ne comptent pas)",
     obstacle_devant: "obstacle_devant() : donne True s'il y a une caisse devant Robi, sinon False"
   };
 
