@@ -361,6 +361,99 @@
       " Donnez-lui d'abord une valeur, par exemple " + name + " = 0, et vérifiez l'orthographe et les majuscules.");
   }
 
+  /* Nom d'un type Python pour un élève, en gardant le nom Python entre parenthèses. */
+  function typeName(t) {
+    var names = {
+      int: "un nombre entier (int)", float: "un nombre à virgule (float)", str: "un texte (str)",
+      bool: "un booléen (bool)", list: "une liste (list)", tuple: "un tuple (tuple)", dict: "un dictionnaire (dict)",
+      NoneType: "None (aucune valeur)", "function": "une commande (function)"
+    };
+    return names[t] || "une valeur de type " + t;
+  }
+
+  function typeHint(a, b) {
+    var types = [a, b];
+    var hasStr = types.indexOf("str") >= 0;
+    var hasNum = types.indexOf("int") >= 0 || types.indexOf("float") >= 0;
+    if (types.indexOf("NoneType") >= 0) {
+      return " Une des valeurs vaut None : peut-être le résultat d'une commande qui ne renvoie rien (sans return) ?";
+    }
+    if (hasStr && hasNum) {
+      return " Transformez le nombre en texte avec str(…), ou le texte en nombre avec int(…)." +
+        " Attention : input() donne toujours un texte (str).";
+    }
+    return "";
+  }
+
+  /* Erreurs fréquentes (types, appels, conversions…) traduites en français ; null si inconnue. */
+  function translateCommon(raw, where) {
+    var m;
+    // --- Erreurs de type ---
+    if ((m = raw.match(/unsupported operand type\(s\) for ([^:]+): '(\w+)' and '(\w+)'/))) {
+      return "Erreur de type" + where + " : on ne peut pas utiliser " + m[1].trim() + " entre " + typeName(m[2]) +
+        " et " + typeName(m[3]) + "." + typeHint(m[2], m[3]);
+    }
+    if ((m = raw.match(/cannot concatenate '(\w+)' and '(\w+)' objects/))) {
+      return "Erreur de type" + where + " : on ne peut pas utiliser + entre " + typeName(m[1]) + " et " + typeName(m[2]) +
+        "." + typeHint(m[1], m[2]);
+    }
+    if ((m = raw.match(/can't multiply sequence by non-int of type '(\w+)'/))) {
+      return "Erreur de type" + where + " : un texte (str) ou une liste ne peut être multiplié que par un nombre entier (int), pas par " +
+        typeName(m[1]) + ".";
+    }
+    if ((m = raw.match(/'([^']+)' not supported between instances of '(\w+)' and '(\w+)'/))) {
+      return "Erreur de type" + where + " : on ne peut pas comparer avec " + m[1] + " " + typeName(m[2]) + " et " +
+        typeName(m[3]) + "." + typeHint(m[2], m[3]);
+    }
+    if ((m = raw.match(/object of type '(\w+)' has no len\(\)/))) {
+      return "Erreur de type" + where + " : len() ne s'applique pas à " + typeName(m[1]) +
+        ", seulement à un texte (str) ou à une liste (list).";
+    }
+    if ((m = raw.match(/'(\w+)' object cannot be interpreted as an integer/))) {
+      return "Erreur de type" + where + " : il faut ici un nombre entier (int), pas " + typeName(m[1]) + "." +
+        (m[1] === "str" ? " Si la valeur vient de input(), transformez-la avec int(…)." : "");
+    }
+    if ((m = raw.match(/'(\w+)' object is not callable/))) {
+      return "Erreur de type" + where + " : vous utilisez comme une commande, avec des parenthèses, " + typeName(m[1]) +
+        ". Vérifiez qu'une variable ne porte pas le même nom qu'une commande.";
+    }
+    // --- Erreurs d'appel de commande ---
+    if ((m = raw.match(/(\w+)\(\) missing (\d+) required (?:positional )?arguments?: (.+?)(?: on line \d+)?$/))) {
+      var params = m[3].replace(/'/g, "").split(/\s*,\s*|\s+and\s+/).filter(Boolean);
+      var plural = params.length > 1;
+      var list = plural ? params.slice(0, -1).join(", ") + " et " + params[params.length - 1] : params[0];
+      return "La commande " + m[1] + "() attend " + (plural ? "des valeurs pour " : "une valeur pour ") + list +
+        ", mais " + (plural ? "elles manquent" : "il n'y en a pas") + " dans l'appel" + where + ". Ajoutez-" +
+        (plural ? "les" : "la") + ", par exemple " + m[1] + "(" + params.map(function () { return "…"; }).join(", ") +
+        "), ou enlevez " + list + " de la définition si la commande n'en a pas besoin.";
+    }
+    if ((m = raw.match(/(\w+)\(\) takes (\d+) positional arguments?\s+but (\d+) (?:was|were)\s+given/))) {
+      if (+m[2] === 0) {
+        return "La commande " + m[1] + "() ne prend aucune valeur entre parenthèses, mais elle en a reçu " + m[3] + where +
+          ". Écrivez simplement " + m[1] + "(), ou ajoutez un paramètre à sa définition.";
+      }
+      return "La commande " + m[1] + "() attend " + m[2] + " valeur" + (+m[2] > 1 ? "s" : "") +
+        " entre parenthèses, mais elle en a reçu " + m[3] + where + ".";
+    }
+    // --- Autres erreurs fréquentes ---
+    if (/ZeroDivisionError/.test(raw)) {
+      return "Division par zéro" + where + " : on ne peut pas diviser par 0.";
+    }
+    if ((m = raw.match(/invalid literal for int\(\) with base \d+: '(.*)'/))) {
+      return "Conversion impossible" + where + " : int() ne peut pas transformer « " + m[1] + " » en nombre entier (int)." +
+        " Vérifiez la valeur, par exemple la réponse tapée à input().";
+    }
+    if ((m = raw.match(/could not convert string to float: '(.*)'/))) {
+      return "Conversion impossible" + where + " : float() ne peut pas transformer « " + m[1] + " » en nombre à virgule (float)." +
+        (/,/.test(m[1]) ? " En Python, les nombres à virgule s'écrivent avec un point : 3.5." : "");
+    }
+    if ((m = raw.match(/(list|string|tuple) index out of range/))) {
+      return "Position en dehors " + (m[1] === "string" ? "du texte" : "de la liste") + where +
+        " : il n'y a pas d'élément à cette position. Les positions commencent à 0 et vont jusqu'à len(…) - 1.";
+    }
+    return null;
+  }
+
   /* Transforme une erreur Skulpt en message compréhensible par un élève. */
   function translateError(err, code) {
     var raw = err && err.toString ? err.toString() : String(err);
@@ -372,11 +465,11 @@
     if (!line && m) line = +m[1];
     var where = line ? " (ligne " + line + ")" : "";
     var detail = raw.replace(/\s*on line \d+\.?\s*$/, "");
-    var msg;
+    var msg, common;
 
     if (/TimeLimitError/.test(raw)) {
       msg = "Le programme met trop de temps à s'exécuter : y a-t-il une boucle qui ne s'arrête jamais ?";
-    } else if (/La tortue|attend un nombre|Couleur invalide/.test(raw)) {
+    } else if (/La tortue|attend un nombre|Couleur invalide|entre les parenthèses/.test(raw)) {
       msg = detail.replace(/^\w+Error:\s*/, "") + where + ".";
     } else if ((m = raw.match(/NameError: name '(\w+)' is not defined/))) {
       msg = nameErrorMessage(m[1], line, code);
@@ -389,10 +482,8 @@
         msg = "Erreur de syntaxe" + where + " : Python ne comprend pas cette ligne. " +
               "Vérifiez les virgules, les parenthèses, les guillemets et les opérateurs (+, -, =…).";
       }
-    } else if ((m = raw.match(/TypeError: (\w+)\(\) takes (\d+) positional arguments?\s+but (\d+) (?:was|were)\s+given/))) {
-      msg = "La commande " + m[1] + "() a reçu " + m[3] + " valeur(s) entre parenthèses alors qu'elle en attend " + m[2] + where + ".";
-    } else if (/TypeError: '(\w+)' object is not callable/.test(raw)) {
-      msg = "Vous essayez d'utiliser comme une commande quelque chose qui n'en est pas une" + where + ".";
+    } else if ((common = translateCommon(raw, where))) {
+      msg = common;
     } else if (/ImportError|ModuleNotFoundError/.test(raw)) {
       var mod = (raw.match(/No module named '?([\w.]+)'?/) || [])[1] || "";
       if (mod === "turtle") {
@@ -402,7 +493,12 @@
               ". Vérifiez son nom" + (global.TURTLE_MODULE_SRC ? " (pour la tortue : « from turtle import * »)." : ".");
       }
     } else {
-      msg = "Erreur" + where + " : " + detail;
+      // erreur non prévue : le type d'erreur en français, sans le nom anglais
+      var kinds = { TypeError: "Erreur de type", ValueError: "Valeur incorrecte", IndexError: "Position incorrecte",
+        KeyError: "Clé introuvable", AttributeError: "Attribut inconnu", RecursionError: "Trop d'appels imbriqués",
+        OverflowError: "Nombre trop grand", ZeroDivisionError: "Division par zéro" };
+      var kind = (detail.match(/^(\w+Error):\s*/) || [])[1];
+      msg = (kinds[kind] || "Erreur") + where + " : " + detail.replace(/^\w+(Error|Exception):\s*/, "");
     }
     return { message: msg, raw: raw, line: line };
   }

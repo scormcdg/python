@@ -127,12 +127,24 @@
     function num(v, fname) {
       var n = js(v);
       if (typeof n !== "number" || isNaN(n)) {
-        throw new Sk.builtin.TypeError(fname + "() attend un nombre, par exemple " + fname + "(100)");
+        var ex = /^(left|right|lt|rt|setheading|seth)$/.test(fname) ? 90 : 100;
+        throw new Sk.builtin.TypeError(fname + "() attend un nombre, par exemple " + fname + "(" + ex + ")");
       }
       return n;
     }
-    function def(names, fn) {
-      var f = new Sk.builtin.func(fn);
+    /* max : nombre de valeurs acceptées entre parenthèses (par défaut, celui de fn) ; Infinity = sans limite */
+    function def(names, fn, max) {
+      var limit = max === undefined ? fn.length : max;
+      var f = new Sk.builtin.func(function () {
+        if (arguments.length > limit) {
+          var nom = names[0] + "()";
+          throw new Sk.builtin.TypeError(limit === 0
+            ? nom + " s'écrit sans rien entre les parenthèses, mais a reçu " + arguments.length + " valeur" + (arguments.length > 1 ? "s" : "")
+            : nom + " accepte au maximum " + limit + " valeur" + (limit > 1 ? "s" : "") + " entre les parenthèses, mais en a reçu " +
+              arguments.length);
+        }
+        return fn.apply(null, arguments);
+      });
       names.forEach(function (n) { mod[n] = f; });
     }
     function colorFromArgs(args, fname) {
@@ -240,19 +252,19 @@
         R.color = R.fillColor = colorFromArgs(args, "color");
       }
       return none;
-    });
+    }, 3);
     def(["pencolor"], function () {
       var args = Array.prototype.slice.call(arguments);
       if (args.length === 0) return py(R.color);
       R.color = colorFromArgs(args, "pencolor");
       return none;
-    });
+    }, 3);
     def(["fillcolor"], function () {
       var args = Array.prototype.slice.call(arguments);
       if (args.length === 0) return py(R.fillColor);
       R.fillColor = colorFromArgs(args, "fillcolor");
       return none;
-    });
+    }, 3);
     def(["width", "pensize"], function (w) {
       if (absent(w)) return py(R.width);
       R.width = num(w, "width");
@@ -272,7 +284,7 @@
       var c = rest.length ? colorFromArgs(rest, "dot") : R.color;
       R.record({ type: "dot", x: R.x, y: R.y, size: s, color: c });
       return none;
-    });
+    }, 4);
     // write("texte"), write("texte", align="center"), write("texte", font=("Arial", 16, "bold"))
     var writeImpl = function (arg, move, align, font) {
       var text = absent(arg) ? "" : new Sk.builtin.str(arg).v;
@@ -296,7 +308,7 @@
       if (args.length === 0) return none;
       R.record({ type: "bgcolor", color: colorFromArgs(args, "bgcolor") });
       return none;
-    });
+    }, 3);
     def(["clear"], function () { R.record({ type: "clear" }); return none; });
     def(["reset"], function () {
       R.record({ type: "clear" });
@@ -322,7 +334,7 @@
     // Commandes acceptées mais sans effet sur le dessin
     def(["done", "mainloop", "exitonclick", "shape", "tracer", "update",
          "title", "delay", "setup", "shapesize", "stamp"],
-        function () { return none; });
+        function () { return none; }, Infinity);
     return mod;
   }
 
