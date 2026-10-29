@@ -114,11 +114,11 @@
       if (!dansTerrain(nx)) echouer({ type: "bord" }, "est au bord du terrain : il ne peut pas sauter plus loin");
       if (m.caisses[nx] > 0) echouer({ type: "caisse" }, "s'est cogné contre une caisse");
       var dh = m.sol[nx] - m.sol[x];
-      // case plate ou plus basse : un petit saut sauter() passe, comme avancer()
-      if (dh <= 0 && n !== 1) echouer({ type: "rien", saut: n }, "n'a pas de marche de " + n + " devant lui : la case suivante " +
-        (dh === 0 ? "est à la même hauteur" : "est plus basse") + " (sauter() ou avancer() suffit)");
-      if (dh > 0 && n < dh) echouer({ type: "court", hauteur: dh, saut: n }, "a sauté trop bas : la marche fait " + dh + " et il n'a sauté que " + n);
-      if (dh > 0 && n > dh) echouer({ type: "haut", hauteur: dh, saut: n }, "a sauté trop haut et s'est cogné : la marche ne fait que " + dh);
+      // sauter() sert uniquement à monter
+      if (dh <= 0) echouer({ type: "rien", saut: n }, "n'a pas de marche à sauter devant lui : la case suivante " +
+        (dh === 0 ? "est à la même hauteur" : "est plus basse") + ", utilisez avancer()");
+      if (n < dh) echouer({ type: "court", hauteur: dh, saut: n }, "a sauté trop bas : la marche fait " + dh + " et il n'a sauté que " + n);
+      if (n > dh) echouer({ type: "haut", hauteur: dh, saut: n }, "a sauté trop haut et s'est cogné : la marche ne fait que " + dh);
       noter({ t: "sauter", de: x, vers: nx, hauteur: n });
       partie.x = nx;
       arrivee(nx);
