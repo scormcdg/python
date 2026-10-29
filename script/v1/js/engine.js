@@ -105,11 +105,29 @@
     return null;
   }
 
+  /* Une seule tortue, commandes écrites directement : seul « from turtle import * » est accepté. */
+  function findForbiddenImport(code) {
+    if (!global.TURTLE_MODULE_SRC) return null;
+    var lines = hideTripleQuotes(code || "").split("\n");
+    for (var i = 0; i < lines.length; i++) {
+      var t = lines[i].replace(STRING_RE, '""').replace(/#.*$/, "").trim();
+      if (/^import\s+(.*,\s*)?turtle\b/.test(t)) {
+        return {
+          line: i + 1,
+          raw: "ImportRule",
+          message: "Ligne " + (i + 1) + " : dans ce cours, on écrit « from turtle import * » et on utilise les commandes " +
+            "directement, par exemple forward(100), sans « turtle. » ni « t. » devant."
+        };
+      }
+    }
+    return null;
+  }
+
   function run(code, onOutput) {
     var Sk = global.Sk;
     var output = "";
     if (global.TurtleRec) global.TurtleRec.reset(); // la tortue est facultative
-    var dup = findDuplicateDef(code);
+    var dup = findIndentProblem(code) || findForbiddenImport(code) || findDuplicateDef(code);
     if (dup) return Promise.resolve({ module: null, error: dup, output: "" });
     configure(function (t) { output += t; if (onOutput) onOutput(t); }, function () { return output; });
     Sk.execStart = Date.now();
@@ -222,6 +240,41 @@
     return problems;
   }
 
+  /*
+   * Règle de la classe : 4 espaces par niveau d'indentation, partout.
+   * Python accepterait 2 ou 3 espaces s'ils sont réguliers ; ici on refuse,
+   * et on désigne la ligne fautive (celle qui n'a pas le bon nombre d'espaces).
+   */
+  var INDENT = 4;
+
+  function findIndentProblem(code) {
+    var lines = hideTripleQuotes(code || "").split("\n");
+    var prev = null; // dernière ligne de code : {indent, text}
+    for (var i = 0; i < lines.length; i++) {
+      var n = i + 1;
+      var t = lines[i].replace(/\t/g, "    ").replace(STRING_RE, '""').replace(/#.*$/, "").replace(/\s+$/, "");
+      if (!t.trim()) continue;
+      var indent = t.length - t.replace(/^\s+/, "").length;
+      var afterHeader = prev && /:$/.test(prev.text);
+      var expected = null;
+      if (afterHeader && indent > prev.indent && indent !== prev.indent + INDENT) {
+        expected = prev.indent + INDENT;
+      } else if (indent % INDENT !== 0) {
+        expected = prev && Math.abs(indent - prev.indent) < INDENT ? prev.indent : Math.round(indent / INDENT) * INDENT;
+      }
+      if (expected !== null) {
+        return {
+          line: n,
+          raw: "IndentationRule",
+          message: "La ligne " + n + " est décalée de " + indent + " espace" + (indent > 1 ? "s" : "") +
+            " : il en faut " + expected + ". Utilisez toujours 4 espaces par niveau (la touche Tab les met pour vous)."
+        };
+      }
+      prev = { indent: indent, text: t.trim() };
+    }
+    return null;
+  }
+
   /* Le problème trouvé sur la ligne signalée par Python, sinon le premier trouvé. */
   function diagnoseSyntax(code, reportedLine) {
     if (!code) return null;
@@ -273,6 +326,10 @@
   function nameErrorMessage(name, line, code) {
     var lines = (code || "").split("\n");
     var where = line ? " (ligne " + line + ")" : "";
+    if ((name === "Turtle" || name === "Screen") && global.TURTLE_MODULE_SRC) {
+      return name + "() n'est pas utilisé dans ce cours" + where + " : il n'y a qu'une seule tortue. " +
+        "Écrivez directement les commandes, par exemple forward(100) ou left(90), sans « t. » devant.";
+    }
     var lineText = line && lines[line - 1] ? lines[line - 1].replace(STRING_RE, '""') : "";
     var isCall = new RegExp("(^|[^\\w.])" + name + "\\s*\\(").test(lineText);
 
