@@ -347,6 +347,7 @@
 
   function modeBacASable() {
     document.body.classList.add("bac-a-sable");
+    $("btn-recommencer").hidden = true; // inutile ici : sauvegarde automatique, ouvrir et enregistrer
     var t = null;
     function plusTard() { clearTimeout(t); t = setTimeout(ajusterHauteurs, 120); }
     window.addEventListener("resize", plusTard);
