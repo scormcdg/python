@@ -363,8 +363,8 @@ code, kbd { font-family: var(--police-code); font-size: 0.9em; }
   pointer-events: none;
 }
 
-.feuille:fullscreen { aspect-ratio: auto; max-height: none; width: 100vw; height: 100vh; border: 0; border-radius: 0; background: var(--papier); }
-.feuille:-webkit-full-screen { aspect-ratio: auto; max-height: none; width: 100vw; height: 100vh; border: 0; border-radius: 0; background: var(--papier); }
+.feuille:fullscreen { aspect-ratio: auto; max-height: none; width: 100vw !important; height: 100vh !important; border: 0; border-radius: 0; background: var(--papier); }
+.feuille:-webkit-full-screen { aspect-ratio: auto; max-height: none; width: 100vw !important; height: 100vh !important; border: 0; border-radius: 0; background: var(--papier); }
 
 /* ---------- Vitesse ---------- */
 
@@ -483,3 +483,9 @@ body.en-plein-ecran { min-height: 100vh; overflow: auto; }
 
 /* Bac à sable : une seule page, pas de barre d'onglets */
 .onglets[hidden] { display: none; }
+
+/* Bac à sable : éditeur et dessin sur toute la hauteur de l'écran */
+body.bac-a-sable .enonce h2 { display: none; }
+body.bac-a-sable .enonce { max-width: none; }
+body.bac-a-sable .editeur { margin-top: 4px; }
+body.bac-a-sable .feuille { aspect-ratio: auto; max-height: none; height: var(--hauteur-feuille, 520px); }

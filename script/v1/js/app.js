@@ -325,6 +325,36 @@
     });
   }
 
+  /* ---------- Bac à sable : l'éditeur et le dessin prennent toute la hauteur ---------- */
+
+  function ajusterHauteurs() {
+    var bas = $("pied") ? $("pied").offsetHeight : 0;
+    var h = window.innerHeight;
+    // éditeur : on laisse la place des boutons et de la console (à sa taille maximale)
+    var cm = editor.getWrapperElement();
+    var haut = cm.getBoundingClientRect().top + window.scrollY;
+    var actions = document.querySelector(".actions");
+    var reserve = (actions ? actions.offsetHeight + 24 : 80) + 30 + 180 + bas + 16;
+    editor.setSize(null, Math.max(260, h - haut - reserve));
+    // dessin : jusqu'en bas de l'écran, sous la feuille il reste le réglage de la vitesse
+    var feuille = $("canvas-tortue").parentNode;
+    var hautF = feuille.getBoundingClientRect().top + window.scrollY;
+    var vitesse = document.querySelector(".vitesse");
+    var reserveF = (vitesse ? vitesse.offsetHeight + 12 : 60) + bas + 24;
+    feuille.style.setProperty("--hauteur-feuille", Math.max(300, h - hautF - reserveF) + "px");
+    redessiner();
+  }
+
+  function modeBacASable() {
+    document.body.classList.add("bac-a-sable");
+    var t = null;
+    function plusTard() { clearTimeout(t); t = setTimeout(ajusterHauteurs, 120); }
+    window.addEventListener("resize", plusTard);
+    document.addEventListener("fullscreenchange", plusTard);
+    document.addEventListener("webkitfullscreenchange", plusTard);
+    ajusterHauteurs();
+  }
+
   /* ---------- Outils du dessin : zoom (− +), échelle, plein écran ---------- */
 
   var ZOOMS = [0.25, 0.5, 0.75, 1, 1.5, 2, 3, 4, 6, 8];
@@ -609,6 +639,7 @@
 
     updateResult();
     show(state.courant);
+    if (SERIE.fichiers || (!graded.length && SERIE.exercices.length === 1)) modeBacASable();
   }
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
