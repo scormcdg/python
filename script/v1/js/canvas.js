@@ -50,11 +50,14 @@
     var fitH = (h - 2 * margin) / Math.max(maxY - minY, 1);
     var k = this.opts.fit ? Math.min(fitW, fitH) : Math.min(1, fitW, fitH);
     var cx = (minX + maxX) / 2, cy = (minY + maxY) / 2;
-    if (!this.opts.fit && k === 1 &&
+    var zoom = this.opts.getZoom ? this.opts.getZoom() : 1;
+    if (!this.opts.fit && k === 1 && zoom <= 1 &&
         Math.max(Math.abs(minX), Math.abs(maxX)) * 2 < w - 2 * margin &&
         Math.max(Math.abs(minY), Math.abs(maxY)) * 2 < h - 2 * margin) {
       cx = 0; cy = 0; // le dessin tient : l'origine reste au centre
     }
+    // zoom choisi par l'élève (boutons + et −) ; en zoomant, la vue est centrée sur le dessin
+    k *= zoom;
     this.ctx = ctx; this.w = w; this.h = h; this.k = k; this.dpr = dpr;
     this.tx = function (x) { return w / 2 + (x - cx) * k; };
     this.ty = function (y) { return h / 2 - (y - cy) * k; };
@@ -64,6 +67,7 @@
     this.bg = this.layer();
     this.background(this.bg.getContext("2d"));
     this.ink = this.layer();
+    if (this.opts.onEchelle) this.opts.onEchelle(this.unite, k);
   };
 
   TurtleCanvas.prototype.layer = function () {
@@ -81,9 +85,16 @@
     if (this.opts.grid === false) return;
     ctx.save();
     if (this.bgColor) ctx.globalAlpha = 0.35; // quadrillage discret sur un fond coloré
-    // Quadrillage de cahier : un carreau = 10 pas de tortue (ou plus si le dessin est réduit)
-    var step = 10 * this.k;
-    while (step < 8) step *= 2;
+    // Quadrillage de cahier : un carreau = 10 pas de tortue. Quand les carreaux deviennent
+    // trop petits ou trop grands, on passe à une autre valeur ronde (1, 2, 5, 10, 20, 50…)
+    var UNITES = [1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000];
+    var unite = UNITES[UNITES.length - 1];
+    for (var i = 0; i < UNITES.length; i++) {
+      if (UNITES[i] * this.k >= 9) { unite = UNITES[i]; break; }
+    }
+    if (unite < 10 && 10 * this.k < 40) unite = 10; // on garde 10 tant que les carreaux restent lisibles
+    this.unite = unite;
+    var step = unite * this.k;
     var ox = this.tx(0), oy = this.ty(0);
     ctx.lineWidth = 1;
     ctx.strokeStyle = css("--carreau", "#dde6f3");

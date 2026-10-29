@@ -254,7 +254,71 @@
    * Bouton dans le coin de la feuille : met le dessin seul en plein écran.
    * Caché si le navigateur ou Moodle ne permet pas le plein écran.
    */
-  function boutonDessinPleinEcran() {
+  /* ---------- Outils du dessin : zoom (− +), échelle, plein écran ---------- */
+
+  var ZOOMS = [0.25, 0.5, 0.75, 1, 1.5, 2, 3, 4, 6, 8];
+
+  function redessiner() {
+    if (!drawing || !drawing.last) return;
+    if (drawing.animating()) animate(drawing.last);
+    else drawing.draw(drawing.last);
+  }
+
+  function nombre(x) {
+    var r = Math.round(x * 100) / 100;
+    return String(r).replace(".", ",");
+  }
+
+  function afficherEchelle(unite, k) {
+    var e = $("echelle");
+    if (!e) return;
+    e.textContent = "1 carreau = forward(" + unite + ") · 1 pas = " + nombre(k) + " pixel" + (k >= 2 ? "s" : "");
+    e.title = "Zoom " + Math.round((state.zoom || 1) * 100) + " %";
+  }
+
+  function outilsDessin() {
+    var feuille = $("canvas-tortue").parentNode;
+    var barre = document.createElement("div");
+    barre.className = "outils-dessin";
+    feuille.appendChild(barre);
+    var echelle = document.createElement("p");
+    echelle.id = "echelle";
+    echelle.className = "echelle";
+    echelle.setAttribute("aria-live", "polite");
+    feuille.appendChild(echelle);
+
+    function boutonZoom(texte, titre, sens) {
+      var b = document.createElement("button");
+      b.type = "button";
+      b.className = "outil-dessin";
+      b.textContent = texte;
+      b.title = titre;
+      b.setAttribute("aria-label", titre);
+      b.addEventListener("click", function () {
+        var z = state.zoom || 1;
+        var i = ZOOMS.indexOf(z);
+        if (i < 0) i = ZOOMS.indexOf(1);
+        i = Math.max(0, Math.min(ZOOMS.length - 1, i + sens));
+        state.zoom = ZOOMS[i];
+        majBoutons();
+        redessiner();
+        saveSoon();
+      });
+      barre.appendChild(b);
+      return b;
+    }
+    var moins = boutonZoom("−", "Dézoomer", -1);
+    var plus = boutonZoom("+", "Zoomer", +1);
+    function majBoutons() {
+      var z = state.zoom || 1;
+      moins.disabled = z <= ZOOMS[0];
+      plus.disabled = z >= ZOOMS[ZOOMS.length - 1];
+    }
+    majBoutons();
+    boutonDessinPleinEcran(barre);
+  }
+
+  function boutonDessinPleinEcran(barre) {
     var feuille = $("canvas-tortue").parentNode;
     var demander = feuille.requestFullscreen || feuille.webkitRequestFullscreen;
     var permis = document.fullscreenEnabled || document.webkitFullscreenEnabled;
@@ -263,10 +327,10 @@
     var REDUIRE = "M5 1v4H1M13 5H9V1M9 13V9h4M1 9h4v4";
     var b = document.createElement("button");
     b.type = "button";
-    b.className = "dessin-plein-ecran";
+    b.className = "outil-dessin dessin-plein-ecran";
     b.innerHTML = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d=""/></svg>';
     var icone = b.querySelector("path");
-    feuille.appendChild(b);
+    barre.appendChild(b);
     function actuel() { return (document.fullscreenElement || document.webkitFullscreenElement) === feuille; }
     function maj() {
       var on = actuel();
@@ -274,11 +338,7 @@
       b.setAttribute("aria-label", b.title);
       icone.setAttribute("d", on ? REDUIRE : AGRANDIR);
       // la feuille change de taille : on redessine (en reprenant l'animation si elle tournait)
-      setTimeout(function () {
-        if (!drawing.last) return;
-        if (drawing.animating()) animate(drawing.last);
-        else drawing.draw(drawing.last);
-      }, 80);
+      setTimeout(redessiner, 80);
     }
     b.addEventListener("click", function () {
       if (actuel()) (document.exitFullscreen || document.webkitExitFullscreen).call(document);
@@ -399,8 +459,13 @@
       ? "Votre travail est enregistré automatiquement dans Moodle."
       : "Mode test hors Moodle : votre travail est enregistré dans ce navigateur uniquement.";
 
-    drawing = new TurtleCanvas($("canvas-tortue"), { margin: 28, getSpeed: sliderSpeed });
-    boutonDessinPleinEcran();
+    if (!(state.zoom > 0)) state.zoom = 1;
+    drawing = new TurtleCanvas($("canvas-tortue"), {
+      margin: 28, getSpeed: sliderSpeed,
+      getZoom: function () { return state.zoom || 1; },
+      onEchelle: afficherEchelle
+    });
+    outilsDessin();
 
     var reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (!(state.vitesse >= 1 && state.vitesse <= 11)) state.vitesse = reduceMotion ? 11 : 6;

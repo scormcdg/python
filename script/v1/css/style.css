@@ -325,10 +325,15 @@ code, kbd { font-family: var(--police-code); font-size: 0.9em; }
 
 .feuille { position: relative; }
 
-.dessin-plein-ecran {
+.outils-dessin {
   position: absolute;
   top: 6px;
   right: 6px;
+  display: flex;
+  gap: 4px;
+}
+
+.outil-dessin {
   width: 28px;
   height: 24px;
   padding: 0;
@@ -339,9 +344,24 @@ code, kbd { font-family: var(--police-code); font-size: 0.9em; }
   border-radius: 4px;
   background: rgba(255, 255, 255, 0.92);
   color: var(--texte);
+  font: 700 16px/1 var(--police);
   cursor: pointer;
 }
-.dessin-plein-ecran:hover { background: #f0f4fc; }
+.outil-dessin:hover:not(:disabled) { background: #f0f4fc; }
+.outil-dessin:disabled { opacity: 0.4; cursor: default; }
+
+.echelle {
+  position: absolute;
+  left: 6px;
+  bottom: 6px;
+  margin: 0;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.85);
+  color: var(--texte-doux);
+  font-size: 0.8rem;
+  pointer-events: none;
+}
 
 .feuille:fullscreen { aspect-ratio: auto; max-height: none; width: 100vw; height: 100vh; border: 0; border-radius: 0; background: var(--papier); }
 .feuille:-webkit-full-screen { aspect-ratio: auto; max-height: none; width: 100vw; height: 100vh; border: 0; border-radius: 0; background: var(--papier); }
