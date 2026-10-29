@@ -323,6 +323,29 @@ code, kbd { font-family: var(--police-code); font-size: 0.9em; }
 
 .feuille canvas { display: block; width: 100%; height: 100%; }
 
+.feuille { position: relative; }
+
+.dessin-plein-ecran {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 28px;
+  height: 24px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--bordure);
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--texte);
+  cursor: pointer;
+}
+.dessin-plein-ecran:hover { background: #f0f4fc; }
+
+.feuille:fullscreen { aspect-ratio: auto; max-height: none; width: 100vw; height: 100vh; border: 0; border-radius: 0; background: var(--papier); }
+.feuille:-webkit-full-screen { aspect-ratio: auto; max-height: none; width: 100vw; height: 100vh; border: 0; border-radius: 0; background: var(--papier); }
+
 /* ---------- Vitesse ---------- */
 
 .vitesse {

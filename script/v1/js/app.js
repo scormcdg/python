@@ -250,6 +250,47 @@
     drawing.draw(snap, { animate: true, onDone: function () { $("btn-finir").hidden = true; } });
   }
 
+  /*
+   * Bouton dans le coin de la feuille : met le dessin seul en plein écran.
+   * Caché si le navigateur ou Moodle ne permet pas le plein écran.
+   */
+  function boutonDessinPleinEcran() {
+    var feuille = $("canvas-tortue").parentNode;
+    var demander = feuille.requestFullscreen || feuille.webkitRequestFullscreen;
+    var permis = document.fullscreenEnabled || document.webkitFullscreenEnabled;
+    if (!demander || !permis) return;
+    var AGRANDIR = "M1 5V1h4M9 1h4v4M13 9v4H9M5 13H1V9";
+    var REDUIRE = "M5 1v4H1M13 5H9V1M9 13V9h4M1 9h4v4";
+    var b = document.createElement("button");
+    b.type = "button";
+    b.className = "dessin-plein-ecran";
+    b.innerHTML = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d=""/></svg>';
+    var icone = b.querySelector("path");
+    feuille.appendChild(b);
+    function actuel() { return (document.fullscreenElement || document.webkitFullscreenElement) === feuille; }
+    function maj() {
+      var on = actuel();
+      b.title = on ? "Quitter le plein écran" : "Dessin en plein écran";
+      b.setAttribute("aria-label", b.title);
+      icone.setAttribute("d", on ? REDUIRE : AGRANDIR);
+      // la feuille change de taille : on redessine (en reprenant l'animation si elle tournait)
+      setTimeout(function () {
+        if (!drawing.last) return;
+        if (drawing.animating()) animate(drawing.last);
+        else drawing.draw(drawing.last);
+      }, 80);
+    }
+    b.addEventListener("click", function () {
+      if (actuel()) (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+      else demander.call(feuille);
+    });
+    document.addEventListener("fullscreenchange", maj);
+    document.addEventListener("webkitfullscreenchange", maj);
+    b.title = "Dessin en plein écran";
+    b.setAttribute("aria-label", b.title);
+    icone.setAttribute("d", AGRANDIR);
+  }
+
   function execute() {
     if (busy) return;
     var code = editor.getValue();
@@ -359,6 +400,7 @@
       : "Mode test hors Moodle : votre travail est enregistré dans ce navigateur uniquement.";
 
     drawing = new TurtleCanvas($("canvas-tortue"), { margin: 28, getSpeed: sliderSpeed });
+    boutonDessinPleinEcran();
 
     var reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (!(state.vitesse >= 1 && state.vitesse <= 11)) state.vitesse = reduceMotion ? 11 : 6;
