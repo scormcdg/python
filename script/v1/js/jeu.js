@@ -161,6 +161,11 @@
       noter({ t: "regarder", x: partie.x, valeur: d });
       return d;
     },
+    sur_coffre: function () {
+      var b = partie.monde.objets[partie.x] === "coffre";
+      noter({ t: "regarder", x: partie.x, valeur: b ? "coffre" : "pas de coffre" });
+      return b;
+    },
     obstacle_devant: function () {
       var nx = devant();
       var b = dansTerrain(nx) && partie.monde.caisses[nx] > 0;
@@ -169,7 +174,7 @@
     }
   };
 
-  var ARITE = { avancer: 0, sauter: 1, demi_tour: 0, frapper: 0, ouvrir: 0, lire_nombre: 0, lire_mot: 0, hauteur_devant: 0, obstacle_devant: 0 };
+  var ARITE = { avancer: 0, sauter: 1, demi_tour: 0, frapper: 0, ouvrir: 0, lire_nombre: 0, lire_mot: 0, hauteur_devant: 0, obstacle_devant: 0, sur_coffre: 0 };
   var NOMS = Object.keys(commandes);
 
   /* Ajoute les commandes aux fonctions de base de Skulpt (une fois). */
