@@ -415,3 +415,25 @@ code, kbd { font-family: var(--police-code); font-size: 0.9em; }
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; animation: none !important; }
 }
+
+/* ---------- Plein écran ---------- */
+
+.plein-ecran {
+  position: fixed;
+  right: 8px;
+  bottom: 6px;
+  z-index: 60;
+  width: 28px;
+  height: 24px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--bordure);
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--texte);
+  cursor: pointer;
+}
+.plein-ecran:hover { background: #f0f4fc; }
+body.en-plein-ecran { min-height: 100vh; overflow: auto; }
