@@ -61,6 +61,8 @@ body {
 }
 
 code, kbd { font-family: var(--police-code); font-size: 0.9em; }
+/* pas de ligatures : on voit exactement les caractères tapés (/=, !=, ->…) */
+code, kbd, pre, .CodeMirror, .console { font-variant-ligatures: none; font-feature-settings: "liga" 0, "calt" 0; }
 
 /* ---------- En-tête et onglets ---------- */
 

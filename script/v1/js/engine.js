@@ -140,13 +140,15 @@
   }
 
   /* Appelle une commande (sans argument) définie par l'élève, tortue remise à zéro. */
-  function callFunction(mod, name) {
+  /* Appelle une commande définie par l'élève ; args (facultatif) : valeurs JS (nombres, textes). */
+  function callFunction(mod, name, args) {
     var Sk = global.Sk;
     var fn = getFunction(mod, name);
+    var pyArgs = (args || []).map(function (v) { return Sk.ffi.remapToPy(v); });
     if (global.TurtleRec) global.TurtleRec.reset(); // la tortue est facultative
     Sk.execStart = Date.now();
     return Sk.misceval
-      .asyncToPromise(function () { return Sk.misceval.callsimOrSuspendArray(fn, []); })
+      .asyncToPromise(function () { return Sk.misceval.callsimOrSuspendArray(fn, pyArgs); })
       .then(function () { return { error: null }; })
       .catch(function (err) { return { error: translateError(err) }; });
   }

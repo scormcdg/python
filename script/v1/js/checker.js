@@ -183,16 +183,18 @@
   function analyzeSource(code) {
     var lines = code.split("\n").map(cleanLine);
     var defs = {};
+    var params = {};
     var main = [];
     var current = null; // {name, indent}
     lines.forEach(function (line) {
       if (!line.trim()) return;
       var indent = line.length - line.replace(/^\s+/, "").length;
       if (current && indent <= current.indent) current = null;
-      var m = line.match(/^(\s*)def\s+(\w+)\s*\(/);
+      var m = line.match(/^(\s*)def\s+(\w+)\s*\(([^)]*)\)?/);
       if (m && !current) {
         current = { name: m[2], indent: indent };
         defs[m[2]] = defs[m[2]] || [];
+        params[m[2]] = (m[3] || "").split(",").map(function (x) { return x.trim(); }).filter(Boolean);
         return;
       }
       if (current) defs[current.name].push(line);
@@ -200,7 +202,7 @@
     });
     var bodies = {};
     Object.keys(defs).forEach(function (k) { bodies[k] = defs[k].join("\n"); });
-    return { defs: bodies, main: main.join("\n") };
+    return { defs: bodies, params: params, main: main.join("\n"), all: lines.join("\n") };
   }
 
   function callsIn(text, name) {
@@ -229,10 +231,13 @@
 
   var refCache = {};
 
+  /* Clé d'un dessin testé : la commande et ses valeurs, ex. "spirale(10,50)" */
+  function targetKey(c) { return c.target + (c.args ? "(" + c.args.join(",") + ")" : ""); }
+
   function shapeTargets(ex) {
     var t = {};
-    (ex.checks || []).forEach(function (c) { if (c.kind === "shape") t[c.target] = true; });
-    return Object.keys(t);
+    (ex.checks || []).forEach(function (c) { if (c.kind === "shape") t[targetKey(c)] = c; });
+    return Object.keys(t).map(function (k) { return t[k]; });
   }
 
   /* Dessins de référence, obtenus en exécutant la (ou les) solution(s). */
@@ -240,7 +245,7 @@
     if (refCache[ex.id]) return Promise.resolve(refCache[ex.id]);
     var targets = shapeTargets(ex);
     var refs = {};
-    targets.forEach(function (t) { refs[t] = []; });
+    targets.forEach(function (c) { refs[targetKey(c)] = []; });
     var chain = Promise.resolve();
     (ex.solutions || []).forEach(function (sol) {
       chain = chain.then(function () {
@@ -248,12 +253,13 @@
           if (r.error) throw new Error("Solution de référence invalide (" + ex.id + ") : " + r.error.raw);
           var programSegs = global.TurtleRec.segments();
           var inner = Promise.resolve();
-          targets.forEach(function (t) {
-            if (t === "<program>") { refs[t].push(programSegs); return; }
+          targets.forEach(function (tc) {
+            var t = tc.target, key = targetKey(tc);
+            if (t === "<program>") { refs[key].push(programSegs); return; }
             inner = inner.then(function () {
-              return global.PyEngine.callFunction(r.module, t).then(function (c) {
-                if (c.error) throw new Error("Solution de référence invalide (" + ex.id + "/" + t + ") : " + c.error.raw);
-                refs[t].push(global.TurtleRec.segments());
+              return global.PyEngine.callFunction(r.module, t, tc.args).then(function (c) {
+                if (c.error) throw new Error("Solution de référence invalide (" + ex.id + "/" + key + ") : " + c.error.raw);
+                refs[key].push(global.TurtleRec.segments());
               });
             });
           });
@@ -265,12 +271,13 @@
   }
 
   function shapeMessage(check, res) {
-    var who = check.target === "<program>" ? "Le dessin de votre programme" : "Le dessin de " + check.target + "()";
+    var appel = check.target + "(" + (check.args || []).join(", ") + ")";
+    var who = check.target === "<program>" ? "Le dessin de votre programme" : "Le dessin de " + appel;
     switch (res.reason) {
       case "empty":
         return check.target === "<program>"
           ? "La tortue n'a rien dessiné. Avez-vous bien appelé votre commande après l'avoir définie ?"
-          : check.target + "() ne dessine rien.";
+          : appel + " ne dessine rien.";
       case "count":
         return who + (res.student < res.expected
           ? " ne correspond pas à la figure attendue : il manque des traits."
@@ -280,7 +287,7 @@
       case "function-missing":
         return "Impossible de tester : la commande " + check.target + "() n'est pas définie.";
       case "error":
-        return check.target + "() provoque une erreur : " + res.error.message;
+        return appel + " provoque une erreur : " + res.error.message;
       default:
         return who + " ne correspond pas à la figure attendue.";
     }
@@ -312,6 +319,7 @@
         var programSegs = T.segments();
         var src = analyzeSource(code);
         var results = [];
+        var badParams = {}; // commandes dont les paramètres sont faux : inutile de les tester
         var chain = Promise.resolve();
 
         (ex.checks || []).forEach(function (c) {
@@ -320,6 +328,24 @@
               var ok = !!E.getFunction(run.module, c.name);
               results.push({ id: c.id, label: c.label, ok: ok,
                 message: ok ? null : (c.fail || "La commande " + c.name + "() n'est pas définie. Vérifiez son nom : def " + c.name + "():") });
+              return;
+            }
+            if (c.kind === "params") {
+              // def nom(p1, p2): avec le bon nombre de paramètres
+              var ps = src.params[c.name];
+              var okp = !!ps && ps.length === c.count;
+              if (!okp) badParams[c.name] = true;
+              results.push({ id: c.id, label: c.label, ok: okp,
+                message: okp ? null : (!ps
+                  ? "La commande " + c.name + "() n'est pas définie."
+                  : c.name + "() doit avoir " + c.count + " paramètre" + (c.count > 1 ? "s" : "") +
+                    " entre les parenthèses, et non " + ps.length + " : " + (c.example || "") ) });
+              return;
+            }
+            if (c.kind === "source") {
+              // règle sur le code (sans les commentaires ni les textes) : re = expression régulière
+              var okr = new RegExp(c.re, "m").test(c.in ? (src.defs[c.in] || "") : src.all);
+              results.push({ id: c.id, label: c.label, ok: okr, message: okr ? null : c.fail });
               return;
             }
             if (c.kind === "calls") {
@@ -340,12 +366,17 @@
             }
             if (c.kind === "shape") {
               var getSegs;
+              if (c.target !== "<program>" && badParams[c.target]) {
+                results.push({ id: c.id, label: c.label, ok: false,
+                  message: "Impossible de tester tant que " + c.target + "() n'a pas le bon nombre de paramètres." });
+                return;
+              }
               if (c.target === "<program>") {
                 getSegs = Promise.resolve({ segs: programSegs });
               } else if (!E.getFunction(run.module, c.target)) {
                 getSegs = Promise.resolve({ missing: true });
               } else {
-                getSegs = E.callFunction(run.module, c.target).then(function (r) {
+                getSegs = E.callFunction(run.module, c.target, c.args).then(function (r) {
                   return r.error ? { error: r.error } : { segs: T.segments() };
                 });
               }
@@ -355,7 +386,7 @@
                 else if (g.error) res = { ok: false, reason: "error", error: g.error };
                 else {
                   res = null;
-                  var refList = refs[c.target] || [];
+                  var refList = refs[targetKey(c)] || [];
                   for (var i = 0; i < refList.length; i++) {
                     var r = compareDrawings(g.segs, refList[i], c.opts);
                     if (r.ok) { res = r; break; }
