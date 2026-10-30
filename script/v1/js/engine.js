@@ -456,6 +456,31 @@
     return null;
   }
 
+  /*
+   * « UnboundLocalError » : dans une commande (def), un nom est modifié (x = …, x += …),
+   * donc Python le considère comme une variable de la commande, utilisée avant d'avoir reçu une valeur.
+   * On montre la ligne où le nom est modifié, c'est là qu'est l'erreur.
+   */
+  function unboundMessage(name, line, code) {
+    var lines = String(code || "").split("\n");
+    var re = new RegExp("^\\s*" + name + "\\s*([-+*/%]|//|\\*\\*)?=(?!=)");
+    var at = null, op = "=";
+    for (var i = 0; i < lines.length; i++) {
+      var mm = re.exec(lines[i].replace(/#.*$/, ""));
+      if (mm && /^\s/.test(lines[i])) { at = i + 1; op = (mm[1] || "") + "="; break; } // dans une commande (ligne décalée)
+    }
+    var ici = at ? " (ligne " + at + ")" : "";
+    var cmd = KNOWN_NAMES.indexOf(name) >= 0 || (global.EXTRA_KNOWN_NAMES || []).indexOf(name) >= 0;
+    if (cmd) {
+      return { line: at || line, message: "« " + name + " " + op + " … »" + ici + " : " + name +
+        " est une commande, pas une variable, on ne peut pas la modifier. " +
+        "Modifiez plutôt la variable ou le paramètre qui contient la valeur, par exemple « longueur " + op + " … »." };
+    }
+    return { line: at || line, message: "La variable « " + name + " » est utilisée" + (line ? " ligne " + line : "") +
+      " avant d'avoir reçu une valeur dans la commande" + (at ? " (elle est modifiée ligne " + at + ")" : "") + ". " +
+      "Donnez-lui une valeur au début de la commande, ou passez-la en paramètre : def commande(" + name + "):" };
+  }
+
   /* Transforme une erreur Skulpt en message compréhensible par un élève. */
   function translateError(err, code) {
     var raw = err && err.toString ? err.toString() : String(err);
@@ -476,6 +501,10 @@
       msg = detail.replace(/^\w+Error:\s*/, "") + where + ".";
     } else if ((m = raw.match(/NameError: name '(\w+)' is not defined/))) {
       msg = nameErrorMessage(m[1], line, code);
+    } else if ((m = raw.match(/UnboundLocalError: local variable '(\w+)' referenced before assignment/))) {
+      var u = unboundMessage(m[1], line, code);
+      line = u.line;
+      msg = u.message;
     } else if (/SyntaxError|IndentationError/.test(raw)) {
       var d = diagnoseSyntax(code, line);
       if (d) {
