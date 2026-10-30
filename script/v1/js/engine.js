@@ -472,12 +472,8 @@
     var ici = at ? " (ligne " + at + ")" : "";
     var cmd = KNOWN_NAMES.indexOf(name) >= 0 || (global.EXTRA_KNOWN_NAMES || []).indexOf(name) >= 0;
     if (cmd) {
-      // la variable passée à cette commande dans le code de l'élève, ex. forward(longueur) → longueur
-      var arg = new RegExp("\\b" + name + "\\s*\\(\\s*([A-Za-z_]\\w*)\\s*\\)").exec(String(code || "").replace(/#.*$/gm, ""));
       return { line: at || line, message: "« " + name + " " + op + " … »" + ici + " : " + name +
-        " est une commande, pas une variable, on ne peut pas la modifier. " +
-        (arg ? "Vouliez-vous modifier la variable qui est entre ses parenthèses : « " + arg[1] + " " + op + " … » ?"
-             : "Modifiez plutôt la variable qui contient la valeur.") };
+        " est une commande, pas une variable, on ne peut pas la modifier." };
     }
     return { line: at || line, message: "La variable « " + name + " » est utilisée" + (line ? " ligne " + line : "") +
       " avant d'avoir reçu une valeur dans la commande" + (at ? " (elle est modifiée ligne " + at + ")" : "") + ". " +
