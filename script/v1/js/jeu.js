@@ -163,13 +163,13 @@
     },
     sur_coffre: function () {
       var b = partie.monde.objets[partie.x] === "coffre";
-      noter({ t: "regarder", x: partie.x, valeur: b ? "coffre" : "pas de coffre" });
+      noter({ t: "regarder", x: partie.x, valeur: b ? "True" : "False" });
       return b;
     },
     obstacle_devant: function () {
       var nx = devant();
       var b = dansTerrain(nx) && partie.monde.caisses[nx] > 0;
-      noter({ t: "regarder", x: partie.x, valeur: b ? "caisse" : "rien" });
+      noter({ t: "regarder", x: partie.x, valeur: b ? "True" : "False" });
       return b;
     }
   };
