@@ -373,15 +373,12 @@
     return names[t] || "une valeur de type " + t;
   }
 
-  function usesInput(code) { return /\binput\s*\(/.test(code || ""); }
-
   function typeHint(a, b, code) {
     var types = [a, b];
     var hasStr = types.indexOf("str") >= 0;
     var hasNum = types.indexOf("int") >= 0 || types.indexOf("float") >= 0;
     if (hasStr && hasNum) {
-      return " Transformez le nombre en texte avec str(…), ou le texte en nombre avec int(…)." +
-        (usesInput(code) ? " Attention : input() donne toujours un texte (str)." : "");
+      return " Transformez le nombre en texte avec str(…), ou le texte en nombre avec int(…).";
     }
     return "";
   }
@@ -412,7 +409,7 @@
     }
     if ((m = raw.match(/'(\w+)' object cannot be interpreted as an integer/))) {
       return "Erreur de type" + where + " : il faut ici un nombre entier (int), pas " + typeName(m[1]) + "." +
-        (m[1] === "str" && usesInput(code) ? " Si la valeur vient de input(), transformez-la avec int(…)." : "");
+        "";
     }
     if ((m = raw.match(/'(\w+)' object is not callable/))) {
       return "Erreur de type" + where + " : vous utilisez comme une commande, avec des parenthèses, " + typeName(m[1]) +
@@ -442,7 +439,7 @@
     }
     if ((m = raw.match(/invalid literal for int\(\) with base \d+: '(.*)'/))) {
       return "Conversion impossible" + where + " : int() ne peut pas transformer « " + m[1] + " » en nombre entier (int)." +
-        (usesInput(code) ? " Vérifiez la valeur, par exemple la réponse tapée à input()." : "");
+        "";
     }
     if ((m = raw.match(/could not convert string to float: '(.*)'/))) {
       return "Conversion impossible" + where + " : float() ne peut pas transformer « " + m[1] + " » en nombre à virgule (float)." +
