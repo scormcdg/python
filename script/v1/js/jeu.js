@@ -248,10 +248,17 @@
 
   /* Lignes de code réelles (sans lignes vides ni commentaires). */
   function compterLignes(code) {
-    return String(code || "").split("\n").filter(function (l) {
-      var t = l.replace(/#.*$/, "").trim();
-      return t.length > 0;
-    }).length;
+    var n = 0;
+    String(code || "").split("\n").forEach(function (l) {
+      var t = l.replace(/"[^"]*"|'[^']*'/g, '""').replace(/#.*$/, "").trim();
+      if (!t) return;
+      n++;
+      // « if x: avancer() » sur une seule ligne compte comme 2 lignes (comme s'il était écrit normalement)
+      if (/^(if|elif|else|for|while|def)\b[^:]*:\s*\S/.test(t)) n++;
+      // plusieurs instructions séparées par « ; » : une ligne par instruction
+      n += (t.replace(/;\s*$/, "").match(/;/g) || []).length;
+    });
+    return n;
   }
 
   global.Jeu = { jouer: jouer, hasard: hasard, compterLignes: compterLignes, commandes: NOMS, copierMonde: copierMonde };
