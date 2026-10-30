@@ -360,7 +360,7 @@
         setLine + ".";
     }
     return "La variable « " + name + " » n'existe pas" + where + " : elle n'a reçu aucune valeur." + (tip ||
-      " Donnez-lui d'abord une valeur, par exemple " + name + " = 0, et vérifiez l'orthographe et les majuscules.");
+      " Donnez-lui d'abord une valeur avec =, et vérifiez l'orthographe et les majuscules.");
   }
 
   /* Nom d'un type Python pour un élève, en gardant le nom Python entre parenthèses. */
@@ -373,31 +373,30 @@
     return names[t] || "une valeur de type " + t;
   }
 
-  function typeHint(a, b) {
+  function usesInput(code) { return /\binput\s*\(/.test(code || ""); }
+
+  function typeHint(a, b, code) {
     var types = [a, b];
     var hasStr = types.indexOf("str") >= 0;
     var hasNum = types.indexOf("int") >= 0 || types.indexOf("float") >= 0;
-    if (types.indexOf("NoneType") >= 0) {
-      return " Une des valeurs vaut None : peut-être le résultat d'une commande qui ne renvoie rien (sans return) ?";
-    }
     if (hasStr && hasNum) {
       return " Transformez le nombre en texte avec str(…), ou le texte en nombre avec int(…)." +
-        " Attention : input() donne toujours un texte (str).";
+        (usesInput(code) ? " Attention : input() donne toujours un texte (str)." : "");
     }
     return "";
   }
 
   /* Erreurs fréquentes (types, appels, conversions…) traduites en français ; null si inconnue. */
-  function translateCommon(raw, where) {
+  function translateCommon(raw, where, code) {
     var m;
     // --- Erreurs de type ---
     if ((m = raw.match(/unsupported operand type\(s\) for ([^:]+): '(\w+)' and '(\w+)'/))) {
       return "Erreur de type" + where + " : on ne peut pas utiliser " + m[1].trim() + " entre " + typeName(m[2]) +
-        " et " + typeName(m[3]) + "." + typeHint(m[2], m[3]);
+        " et " + typeName(m[3]) + "." + typeHint(m[2], m[3], code);
     }
     if ((m = raw.match(/cannot concatenate '(\w+)' and '(\w+)' objects/))) {
       return "Erreur de type" + where + " : on ne peut pas utiliser + entre " + typeName(m[1]) + " et " + typeName(m[2]) +
-        "." + typeHint(m[1], m[2]);
+        "." + typeHint(m[1], m[2], code);
     }
     if ((m = raw.match(/can't multiply sequence by non-int of type '(\w+)'/))) {
       return "Erreur de type" + where + " : un texte (str) ou une liste ne peut être multiplié que par un nombre entier (int), pas par " +
@@ -405,7 +404,7 @@
     }
     if ((m = raw.match(/'([^']+)' not supported between instances of '(\w+)' and '(\w+)'/))) {
       return "Erreur de type" + where + " : on ne peut pas comparer avec " + m[1] + " " + typeName(m[2]) + " et " +
-        typeName(m[3]) + "." + typeHint(m[2], m[3]);
+        typeName(m[3]) + "." + typeHint(m[2], m[3], code);
     }
     if ((m = raw.match(/object of type '(\w+)' has no len\(\)/))) {
       return "Erreur de type" + where + " : len() ne s'applique pas à " + typeName(m[1]) +
@@ -413,7 +412,7 @@
     }
     if ((m = raw.match(/'(\w+)' object cannot be interpreted as an integer/))) {
       return "Erreur de type" + where + " : il faut ici un nombre entier (int), pas " + typeName(m[1]) + "." +
-        (m[1] === "str" ? " Si la valeur vient de input(), transformez-la avec int(…)." : "");
+        (m[1] === "str" && usesInput(code) ? " Si la valeur vient de input(), transformez-la avec int(…)." : "");
     }
     if ((m = raw.match(/'(\w+)' object is not callable/))) {
       return "Erreur de type" + where + " : vous utilisez comme une commande, avec des parenthèses, " + typeName(m[1]) +
@@ -443,7 +442,7 @@
     }
     if ((m = raw.match(/invalid literal for int\(\) with base \d+: '(.*)'/))) {
       return "Conversion impossible" + where + " : int() ne peut pas transformer « " + m[1] + " » en nombre entier (int)." +
-        " Vérifiez la valeur, par exemple la réponse tapée à input().";
+        (usesInput(code) ? " Vérifiez la valeur, par exemple la réponse tapée à input()." : "");
     }
     if ((m = raw.match(/could not convert string to float: '(.*)'/))) {
       return "Conversion impossible" + where + " : float() ne peut pas transformer « " + m[1] + " » en nombre à virgule (float)." +
@@ -477,7 +476,7 @@
     }
     return { line: at || line, message: "La variable « " + name + " » est utilisée" + (line ? " ligne " + line : "") +
       " avant d'avoir reçu une valeur dans la commande" + (at ? " (elle est modifiée ligne " + at + ")" : "") + ". " +
-      "Donnez-lui une valeur au début de la commande, ou passez-la en paramètre : def commande(" + name + "):" };
+      "Donnez-lui une valeur dans la commande avant de l'utiliser, ou passez-la en paramètre." };
   }
 
   /* Transforme une erreur Skulpt en message compréhensible par un élève. */
@@ -513,7 +512,7 @@
         msg = "Erreur de syntaxe" + where + " : Python ne comprend pas cette ligne. " +
               "Vérifiez les virgules, les parenthèses, les guillemets et les opérateurs (+, -, =…).";
       }
-    } else if ((common = translateCommon(raw, where))) {
+    } else if ((common = translateCommon(raw, where, code))) {
       msg = common;
     } else if (/ImportError|ModuleNotFoundError/.test(raw)) {
       var mod = (raw.match(/No module named '?([\w.]+)'?/) || [])[1] || "";
