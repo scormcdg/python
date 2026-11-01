@@ -238,7 +238,8 @@
       m[2].split(",").forEach(function (p) { p = p.replace(/=.*$/, "").trim(); if (p) noms.push(p); });
     }
     var commandes = KNOWN_NAMES.concat(global.EXTRA_KNOWN_NAMES || [], defs).filter(function (x) { return !/^(True|False|None)$/.test(x); });
-    return { noms: noms.concat(KNOWN_NAMES, global.EXTRA_KNOWN_NAMES || []), commandes: commandes };
+    return { noms: noms.concat(KNOWN_NAMES, global.EXTRA_KNOWN_NAMES || []), commandes: commandes,
+      espaces: /^ +\S/m.test(String(code || "")) };
   }
 
   function sansAccent(m) { return m.normalize ? m.normalize("NFD").replace(/[\u0300-\u036f]/g, "") : m; }
@@ -260,7 +261,7 @@
       return r("Les noms ne peuvent pas contenir d'accent ici" + L + " : écrivez « " + sansAccent(m[0]) + " » au lieu de « " + m[0] + " ».");
     if ((m = t.match(/[^\x00-\x7F]/))) return r("Le caractère « " + m[0] + " » n'est pas accepté en Python" + L + ".");
     var lead = (brut.match(/^[ \t]*/) || [""])[0];
-    if (/\t/.test(lead) && / /.test(lead)) return r("La ligne " + n + " mélange tabulations et espaces au début : effacez le décalage et remettez-le avec la touche Tab.");
+    if (/\t/.test(lead) && (/ /.test(lead) || connus.espaces)) return r("La ligne " + n + " mélange tabulations et espaces au début : effacez le décalage et remettez-le avec la touche Tab.");
     // noms de variables impossibles
     if ((m = t.match(/^([A-Za-z_]\w*)\s*(?:[-+*\/%]|\/\/|\*\*)?=(?!=)/)) && KEYWORDS.test(m[1]))
       return r("« " + m[1] + " » est un mot réservé de Python" + L + " : il ne peut pas servir de nom de variable. Choisissez un autre nom.");
@@ -742,7 +743,9 @@
     var detail = raw.replace(/\s*on line \d+\.?\s*$/, "");
     var msg, common;
 
-    if (/'return' outside function/.test(raw)) {
+    if (/can't assign to (literal|operator|function call)/.test(raw)) {
+      msg = "À gauche du « = », il faut un nom de variable" + where + " : par exemple x = 5, et non 5 = x.";
+    } else if (/'return' outside function/.test(raw)) {
       msg = "« return » ne peut être utilisé que dans une commande (def)" + where + ".";
     } else if (/RecursionError|Maximum call stack/.test(raw)) {
       msg = "Trop d'appels imbriqués" + where + " : une commande s'appelle elle-même sans jamais s'arrêter.";
