@@ -560,7 +560,9 @@
     // Défini plus bas dans le programme ?
     var defLine = 0, setLine = 0;
     var defRe = new RegExp("^\\s*def\\s+" + name + "\\s*\\(");
-    var setRe = new RegExp("^\\s*(" + name + "\\s*=(?!=)|" + name + "\\s*[-+*/]=|for\\s+" + name + "\\s+in\\b)");
+    // seule une vraie affectation (x = …) ou un for donne une valeur ; « x += 1 » suppose que x existe déjà
+    var setRe = new RegExp("^\\s*(" + name + "\\s*=(?!=)|for\\s+" + name + "\\s+in\\b)");
+    var modifRe = new RegExp("^\\s*" + name + "\\s*(?:[-+*/%]|//|\\*\\*)=");
     for (var i = (line || 0); i < lines.length; i++) {
       if (!defLine && defRe.test(lines[i])) defLine = i + 1;
       if (!setLine && setRe.test(lines[i])) setLine = i + 1;
@@ -583,6 +585,9 @@
     }
     if (texteSansGuillemets) {
       return "La variable « " + name + " » n'existe pas" + where + ". Si c'est un texte, mettez-le entre guillemets : \"" + name + "\".";
+    }
+    if (lines.some(function (l) { return modifRe.test(l); })) {
+      return "La variable « " + name + " » est utilisée" + where + " avant d'avoir été définie : donnez-lui d'abord une valeur avec =.";
     }
     return "La variable « " + name + " » n'existe pas" + where + " : elle n'a reçu aucune valeur." + (tip ||
       " Donnez-lui d'abord une valeur avec =, et vérifiez l'orthographe et les majuscules.");
