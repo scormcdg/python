@@ -743,7 +743,7 @@
     var detail = raw.replace(/\s*on line \d+\.?\s*$/, "");
     var msg, common;
 
-    if (/can't assign to (literal|operator|function call)/.test(raw)) {
+    if (/can't assign to literal/.test(raw)) {
       msg = "À gauche du « = », il faut un nom de variable" + where + " : par exemple x = 5, et non 5 = x.";
     } else if (/'return' outside function/.test(raw)) {
       msg = "« return » ne peut être utilisé que dans une commande (def)" + where + ".";
