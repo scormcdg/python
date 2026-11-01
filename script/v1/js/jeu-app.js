@@ -185,12 +185,12 @@
       return Jeu.jouer(code, monde).then(function (r) {
         var b = bilanPartie(r);
         var texte = (r.output ? r.output + (r.output.slice(-1) === "\n" ? "" : "\n") : "") + b.texte;
+        // « en route » seulement s'il y a vraiment une animation, et avant elle : le bilan l'écrase à la fin
+        if (vitesse() && r.evenements.length) showText((r.output || "") + "Robi est en route…", "");
         animer(r, function () {
           showText(texte, b.classe === "erreur" ? "erreur" : "");
           if (r.erreur) showError({ message: texte, line: r.erreur.line });
         });
-        if (!vitesse()) return;
-        showText((r.output || "") + "Robi est en route…", "");
       });
     });
   }
