@@ -389,14 +389,21 @@
         problems.push({ line: n, message: "Il manque les deux-points « : » à la fin de la ligne " + n + "." });
       }
       if (prev && /:\s*$/.test(prev.text) && indent <= prev.indent) {
+        var seulementCommentaires = lines.slice(prev.n, n - 1).some(function (l) { return /^\s*#/.test(l); });
         problems.push({ line: n, message: "Il manque une indentation (ligne " + n + ") : les instructions à l'intérieur de « " +
-          prev.text.trim() + " » doivent être décalées vers la droite." });
+          prev.text.trim() + " » doivent être décalées vers la droite." +
+          (seulementCommentaires ? " Un commentaire ne compte pas : il faut au moins une instruction (par exemple pass)." : "") });
       } else if (prev && !/:\s*$/.test(prev.text) && indent > prev.indent) {
         problems.push({ line: n, message: "Indentation inattendue (ligne " + n + ") : cette ligne est décalée vers la droite alors qu'elle ne devrait pas l'être." });
       } else if (!prev && indent > 0) {
         problems.push({ line: n, message: "Indentation inattendue (ligne " + n + ") : la première instruction ne doit pas être décalée." });
       }
       prev = { indent: indent, text: code1, n: n };
+    }
+    // le programme se termine par « def f(): », « for … : », « if … : » sans rien en dessous
+    if (prev && /:\s*$/.test(prev.text)) {
+      problems.push({ line: prev.n, message: "La ligne " + prev.n + " se termine par « : », mais il n'y a rien en dessous : " +
+        "écrivez les instructions de « " + prev.text.trim() + " » sur les lignes suivantes, décalées de 4 espaces (au moins une instruction, par exemple pass)." });
     }
     return problems;
   }
