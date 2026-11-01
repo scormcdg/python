@@ -568,6 +568,20 @@
       if (!setLine && setRe.test(lines[i])) setLine = i + 1;
     }
 
+    // commande définie seulement à l'intérieur d'une autre commande
+    if (isCall && !new RegExp("^def\\s+" + name + "\\s*\\(", "m").test(src)) {
+      for (var j = 0; j < lines.length; j++) {
+        var dm = new RegExp("^(\\s+)def\\s+" + name + "\\s*\\(").exec(lines[j].replace(/\t/g, "    "));
+        if (!dm) continue;
+        for (var k = j - 1; k >= 0; k--) {
+          var em = /^(\s*)def\s+([A-Za-z_]\w*)\s*\(/.exec(lines[k].replace(/\t/g, "    "));
+          if (em && em[1].length < dm[1].length) {
+            return "La commande « " + name + " »" + (line ? ", utilisée ligne " + line + "," : "") + " est définie à l'intérieur de « " + em[2] +
+              " » (ligne " + (j + 1) + ") : elle ne peut être utilisée que dans « " + em[2] + " ». Si elle doit servir ailleurs, enlevez le décalage de son def.";
+          }
+        }
+      }
+    }
     var guess = similarName(name, code);
     var tip = guess ? " Vouliez-vous écrire « " + guess + " » ?" : "";
 
