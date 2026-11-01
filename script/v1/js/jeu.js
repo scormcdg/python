@@ -193,6 +193,9 @@
             : "accepte au maximum " + max + " valeur entre les parenthèses, mais en a reçu " + args.length));
         }
         if (!partie) throw new Sk.builtin.RuntimeError("Robi n'est pas encore sur le terrain");
+        if (partie.autorisees && partie.autorisees.indexOf(nom) < 0) {
+          throw new Sk.builtin.RuntimeError("Robi ne connaît pas la commande « " + nom + " » dans ce niveau : utilisez seulement les commandes de la liste");
+        }
         var res;
         if (nom === "sauter") {
           var n = args.length ? Sk.ffi.remapToJs(args[0]) : 1;
@@ -215,7 +218,7 @@
    * Exécute un programme sur un terrain.
    * Résout { ok, erreur, output, evenements, monde (départ), final: { x, dir, cle, ouvert } }.
    */
-  function jouer(code, monde) {
+  function jouer(code, monde, autorisees) {
     installer();
     var depart = copierMonde(monde);
     // « avancer » seul sur une ligne : Python ne dit rien, mais Robi ne fait rien non plus
@@ -232,6 +235,7 @@
       }
     }
     nouvellePartie(monde);
+    partie.autorisees = autorisees || null;   // commandes permises dans ce niveau (null = toutes)
     return global.PyEngine.run(code).then(function (r) {
       var p = partie;
       partie = null;

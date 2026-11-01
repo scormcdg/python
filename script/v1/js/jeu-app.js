@@ -182,7 +182,7 @@
     clearError();
     hideConsole();
     exclusive(function () {
-      return Jeu.jouer(code, monde).then(function (r) {
+      return Jeu.jouer(code, monde, current.commandes).then(function (r) {
         var b = bilanPartie(r);
         var texte = (r.output ? r.output + (r.output.slice(-1) === "\n" ? "" : "\n") : "") + b.texte;
         // « en route » seulement s'il y a vraiment une animation, et avant elle : le bilan l'écrase à la fin
@@ -260,7 +260,7 @@
       mondes.forEach(function (m, k) {
         chain = chain.then(function () {
           if (echec) return;
-          return Jeu.jouer(code, m).then(function (r) {
+          return Jeu.jouer(code, m, niveau.commandes).then(function (r) {
             derniere = r;
             if (!r.ok) echec = { r: r, k: k };
           });
