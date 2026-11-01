@@ -105,6 +105,51 @@
     return null;
   }
 
+  /*
+   * Nom d'une commande prédéfinie réutilisé comme variable, paramètre ou commande (color = "red", def circle():…).
+   * Python l'accepte, mais la commande ne marche plus ensuite : on le signale avant d'exécuter.
+   */
+  var NOMS_PYTHON = ["print", "input", "range", "int", "float", "str", "len", "abs", "round", "min", "max", "list", "sum", "type"];
+  var NOMS_TORTUE = ["forward", "backward", "left", "right", "goto", "penup", "pendown", "color", "pencolor", "fillcolor",
+    "width", "pensize", "circle", "dot", "write", "speed", "begin_fill", "end_fill", "shape", "done", "setheading", "home",
+    "bgcolor", "hideturtle", "showturtle"];
+
+  function findShadowedName(code) {
+    var src = hideTripleQuotes(code || "");
+    var tortue = /^\s*from\s+turtle\s+import\b/m.test(src);
+    function origine(nom) {
+      if (NOMS_PYTHON.indexOf(nom) >= 0) return "de Python";
+      if (tortue && NOMS_TORTUE.indexOf(nom) >= 0) return "de la tortue";
+      if ((global.EXTRA_KNOWN_NAMES || []).indexOf(nom) >= 0) return "de Robi";
+      return null;
+    }
+    var lines = src.split("\n");
+    for (var i = 0; i < lines.length; i++) {
+      var t = lines[i].replace(STRING_RE, '""').replace(/#.*$/, "");
+      var n = i + 1, m, o;
+      if ((m = /^\s*def\s+(\w+)\s*\(([^)]*)\)?/.exec(t))) {
+        if ((o = origine(m[1]))) {
+          return { line: n, raw: "ShadowRule: " + m[1], message: "Ligne " + n + " : « " + m[1] + " » est déjà une commande " + o +
+            ". Donnez un autre nom à votre commande, sinon la commande " + o + " ne marche plus." };
+        }
+        var params = (m[2] || "").split(",").map(function (x) { return x.replace(/=.*$/, "").trim(); });
+        for (var k = 0; k < params.length; k++) {
+          if ((o = origine(params[k]))) {
+            return { line: n, raw: "ShadowRule: " + params[k], message: "Ligne " + n + " : le paramètre « " + params[k] +
+              " » porte le nom d'une commande " + o + " (" + params[k] + "(…)). Choisissez un autre nom, sinon la commande ne marche plus dans « " + m[1] + " »." };
+          }
+        }
+        continue;
+      }
+      m = /^\s*(\w+)\s*(?:[-+*\/%]|\/\/|\*\*)?=(?!=)/.exec(t) || /^\s*for\s+(\w+)\s+in\b/.exec(t);
+      if (m && (o = origine(m[1]))) {
+        return { line: n, raw: "ShadowRule: " + m[1], message: "Ligne " + n + " : « " + m[1] + " » est le nom d'une commande " + o +
+          " (" + m[1] + "(…)). Ne l'utilisez pas comme nom de variable, sinon la commande ne marche plus : choisissez un autre nom." };
+      }
+    }
+    return null;
+  }
+
   /* Une seule tortue, commandes écrites directement : seul « from turtle import * » est accepté. */
   function findForbiddenImport(code) {
     if (!global.TURTLE_MODULE_SRC) return null;
@@ -127,7 +172,7 @@
     var Sk = global.Sk;
     var output = "";
     if (global.TurtleRec) global.TurtleRec.reset(); // la tortue est facultative
-    var dup = findIndentProblem(code) || findForbiddenImport(code) || findDuplicateDef(code);
+    var dup = findIndentProblem(code) || findForbiddenImport(code) || findDuplicateDef(code) || findShadowedName(code);
     if (dup) return Promise.resolve({ module: null, error: dup, output: "" });
     configure(function (t) { output += t; if (onOutput) onOutput(t); }, function () { return output; });
     Sk.execStart = Date.now();
