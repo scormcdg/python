@@ -226,10 +226,86 @@
     });
   }
 
+  /* Noms du programme (variables, commandes définies) et commandes connues (Python, tortue, Robi). */
+  function nomsConnus(code) {
+    var src = String(code || "").replace(STRING_RE, '""').replace(/#.*$/gm, "");
+    var noms = [], defs = [], m;
+    var re1 = /^\s*([A-Za-z_]\w*)\s*(?:[-+*\/%]|\/\/|\*\*)?=(?!=)/gm, re2 = /^\s*def\s+([A-Za-z_]\w*)\s*\(([^)]*)/gm, re3 = /^\s*for\s+([A-Za-z_]\w*)\s+in\b/gm;
+    while ((m = re1.exec(src))) noms.push(m[1]);
+    while ((m = re3.exec(src))) noms.push(m[1]);
+    while ((m = re2.exec(src))) {
+      defs.push(m[1]); noms.push(m[1]);
+      m[2].split(",").forEach(function (p) { p = p.replace(/=.*$/, "").trim(); if (p) noms.push(p); });
+    }
+    var commandes = KNOWN_NAMES.concat(global.EXTRA_KNOWN_NAMES || [], defs).filter(function (x) { return !/^(True|False|None)$/.test(x); });
+    return { noms: noms.concat(KNOWN_NAMES, global.EXTRA_KNOWN_NAMES || []), commandes: commandes };
+  }
+
+  function sansAccent(m) { return m.normalize ? m.normalize("NFD").replace(/[\u0300-\u036f]/g, "") : m; }
+
+  /*
+   * Erreurs de syntaxe reconnues sur une ligne (t : ligne sans textes ni commentaires, brut : ligne d'origine).
+   * Renvoie { message } ou null.
+   */
+  function problemePrecis(t, brut, n, indent, premier, dernierA, connus) {
+    var m, L = " (ligne " + n + ")";
+    function r(msg, extra) { var o = { message: msg }; if (extra) o.sansDeuxPoints = true; return o; }
+    // caractères copiés d'un traitement de texte
+    if (/[\u00a0\u2009\u200b\u202f\ufeff]/.test(t))
+      return r("La ligne " + n + " contient un espace spécial invisible (souvent après un copier-coller) : effacez les espaces de cette ligne et retapez-les.");
+    if ((m = t.match(/[“”‘’«»„]/)))
+      return r("Les guillemets « " + m[0] + " »" + L + " viennent d'un traitement de texte et ne sont pas acceptés : utilisez \" ou ' (touches du clavier).");
+    if (/°/.test(t)) return r("Le signe « ° » n'est pas accepté" + L + " : écrivez seulement le nombre, par exemple left(90).");
+    if ((m = t.match(/[A-Za-z_\d]*[À-ÖØ-öø-ÿ][\wÀ-ÖØ-öø-ÿ]*/)))
+      return r("Les noms ne peuvent pas contenir d'accent ici" + L + " : écrivez « " + sansAccent(m[0]) + " » au lieu de « " + m[0] + " ».");
+    if ((m = t.match(/[^\x00-\x7F]/))) return r("Le caractère « " + m[0] + " » n'est pas accepté en Python" + L + ".");
+    var lead = (brut.match(/^[ \t]*/) || [""])[0];
+    if (/\t/.test(lead) && / /.test(lead)) return r("La ligne " + n + " mélange tabulations et espaces au début : effacez le décalage et remettez-le avec la touche Tab.");
+    // noms de variables impossibles
+    if ((m = t.match(/^([A-Za-z_]\w*)\s*(?:[-+*\/%]|\/\/|\*\*)?=(?!=)/)) && KEYWORDS.test(m[1]))
+      return r("« " + m[1] + " » est un mot réservé de Python" + L + " : il ne peut pas servir de nom de variable. Choisissez un autre nom.");
+    if (/^def\s+[A-Za-z_]\w*\s*:/.test(t)) return r("Il manque les parenthèses après le nom de la commande" + L + " : " + t.replace(/\s*:\s*$/, "") + "():");
+    if ((m = t.match(/^def\s+([A-Za-z_]\w*(?:\s+[A-Za-z_]\w*)+)\s*\(/)))
+      return r("Un nom de commande ne peut pas contenir d'espace" + L + " : écrivez « " + m[1].split(/\s+/).join("_") + " ».");
+    if ((m = t.match(/^([A-Za-z_]\w*(?:\s+[A-Za-z_]\w*)+)\s*=(?!=)/)) && !m[1].split(/\s+/).some(function (w) { return KEYWORDS.test(w); }))
+      return r("Un nom de variable ne peut pas contenir d'espace" + L + " : écrivez « " + m[1].split(/\s+/).join("_") + " ».");
+    if ((m = t.match(/^([A-Za-z_]\w*(?:-[A-Za-z_]\w*)+)\s*=(?!=)/)))
+      return r("Le tiret « - » est un moins : il ne peut pas être dans un nom" + L + ". Écrivez « " + m[1].replace(/-/g, "_") + " ».");
+    if ((m = t.match(/(^|[^\w.])(\d+)([A-Za-z_]\w*)/)) && !/^(e\d*|j|x[0-9a-f]+|o[0-7]+|b[01]+)$/i.test(m[3])) {
+      if (m[1] === "" && /^\d+[A-Za-z_]\w*\s*=(?!=)/.test(t)) return r("Un nom de variable ne peut pas commencer par un chiffre" + L + ".");
+      return r("Pour multiplier, il faut écrire le signe *" + L + " : " + m[2] + "*" + m[3] + ".");
+    }
+    // opérateurs et comparaisons
+    if ((m = t.match(/([A-Za-z_]\w*)\s*(\+\+|--)\s*$/)))
+      return r("Python n'a pas « " + m[2] + " »" + L + " : écrivez " + m[1] + (m[2] === "++" ? " += 1." : " -= 1."));
+    if (/(^|[^=!<>])=\s*$/.test(t)) return r("Il manque une valeur après « = » à la ligne " + n + ".");
+    if (/^else\s+if\b/.test(t)) return r("En Python, « else if » s'écrit « elif »" + L + ".");
+    if (/^(if|elif|while)\b/.test(t) && /[^=!<>]=[^=]/.test(t.replace(/\([^()]*\)/g, "()")))
+      return r("Pour comparer, on écrit « == » (deux signes égal)" + L + " : un seul « = » sert à donner une valeur à une variable.");
+    if ((m = t.match(/\b(and|or)\s*(<=|>=|==|!=|<|>)/))) {
+      var v = (t.match(/^(?:if|elif|while)\s+(?:not\s+)?([A-Za-z_]\w*)/) || [])[1];
+      return r("Après « " + m[1] + " », il faut répéter ce qu'on compare" + L + (v ? " : écrivez « " + m[1] + " " + v + " " + m[2] + " … »." : "."));
+    }
+    if (/\([^)]*;/.test(t)) return r("Entre les parenthèses, les valeurs se séparent par une virgule, pas par un point-virgule" + L + ".");
+    // else / elif mal placés
+    if (premier === "elif" || premier === "else") {
+      var avant = dernierA[indent];
+      if (avant === "else") return r("« " + premier + " » ne peut pas venir après un « else »" + L + " : le « else » doit toujours être en dernier.");
+      var ok = premier === "elif" ? /^(if|elif)$/.test(avant || "") : /^(if|elif|for|while|try|except)$/.test(avant || "");
+      if (!ok) return r("« " + premier + " » doit suivre un « if », avec le même décalage" + L + ".");
+    }
+    // deux-points en trop
+    if (/:\s*$/.test(t) && !/^(def|for|while|if|elif|else|try|except|finally|with|class|lambda)\b/.test(t) && !motCleProche(premier, t))
+      return r("Les deux-points « : » sont en trop à la fin de la ligne " + n + " : on ne les met qu'après if, elif, else, for, while et def.", true);
+    return null;
+  }
+
   function findSyntaxProblems(code) {
     var problems = [];
     var lines = hideTripleQuotes(code).split("\n");
     var prev = null; // {indent, text, n}
+    var dernierA = {};  // décalage → premier mot de la dernière ligne à ce décalage (pour else / elif)
+    var connus = nomsConnus(code);
     var blockHeader = /^(def|for|while|if|elif|else|try|except|finally|with|class)\b/;
     for (var i = 0; i < lines.length; i++) {
       var n = i + 1;
@@ -245,6 +321,16 @@
       if (!code1.trim()) continue;
       var indent = code1.length - code1.trimStart().length;
       var t = code1.trim();
+      var premier = (t.match(/^[A-Za-z_]\w*/) || [""])[0];
+
+      // ---- erreurs précises, reconnues sur la ligne elle-même ----
+      var precis = problemePrecis(t, lines[i], n, indent, premier, dernierA, connus);
+      if (precis) {
+        problems.push({ line: n, message: precis.message });
+        if (precis.sansDeuxPoints) code1 = code1.replace(/:\s*$/, "");
+      }
+      Object.keys(dernierA).forEach(function (k) { if (+k > indent) delete dernierA[k]; });
+      dernierA[indent] = /^else\s+if\b/.test(t) ? "elif" : premier;
 
       // deux valeurs côte à côte : virgule (ou opérateur) oubliée
       var toks = raw.match(TOKEN_RE) || [];
@@ -252,7 +338,13 @@
       if (cut >= 0) toks = toks.slice(0, cut);
       var premierMot = toks.length > 1 && /^[A-Za-z_]\w*$/.test(toks[0]) && !KEYWORDS.test(toks[0]) && toks[0] !== "print";
       var motInconnu = premierMot && (isValueToken(toks[1]) || (toks[1] === ":" && motCleProche(toks[0], t)));
-      if (motInconnu) {
+      if (precis) {
+        // déjà expliqué plus précisément
+      } else if (connus.commandes.indexOf(toks[0]) >= 0 && toks.length > 1 && isValueToken(toks[1])) {
+        // « forward 100 », « print "Bonjour" » : parenthèses oubliées
+        problems.push({ line: n, message: toks[0] + " s'écrit avec des parenthèses (ligne " + n + ") : " +
+          toks[0] + "(" + toks.slice(1).join(" ").replace(/ ([,)])/g, "$1") + ")." });
+      } else if (motInconnu) {
         // « ilif a == … », « fro turtle import * », « fore i in … », « esle: » : premier mot mal écrit
         var mot = motCleProche(toks[0], t);
         problems.push({ line: n, message: mot
@@ -264,21 +356,34 @@
         for (var k = 0; k + 1 < toks.length; k++) {
           var endsValue = isValueToken(toks[k]) || /^[)\]}]$/.test(toks[k]);
           var isStr = function (x) { return /^(?:[rRbBfFuU]{1,2})?["']/.test(x); };
+          var nomNu = function (x) { return /^[A-Za-z_]\w*$/.test(x) && !KEYWORDS.test(x); };
           if (isStr(toks[k]) && isStr(toks[k + 1])) continue; // "a" "b" est valide en Python
           if (endsValue && isValueToken(toks[k + 1])) {
-            problems.push({ line: n, message: "Il manque une virgule (ou un opérateur comme +) entre « " + toks[k] +
-              " » et « " + toks[k + 1] + " » à la ligne " + n + "." });
+            if (toks[k + 2] === "=" ) {
+              // « x = 5 y = 6 »
+              problems.push({ line: n, message: "Il y a deux instructions sur la ligne " + n + " : écrivez-les sur deux lignes." });
+            } else if (nomNu(toks[k]) && nomNu(toks[k + 1]) && connus.noms.indexOf(toks[k]) < 0 && connus.noms.indexOf(toks[k + 1]) < 0) {
+              // « print(Bonjour tout le monde) » : un texte sans guillemets
+              var mots = [];
+              for (var q = k; q < toks.length && nomNu(toks[q]); q++) mots.push(toks[q]);
+              while (k > 0 && nomNu(toks[k - 1]) && connus.noms.indexOf(toks[k - 1]) < 0 && toks[k - 1] !== toks[0]) { k--; mots.unshift(toks[k]); }
+              problems.push({ line: n, message: "Si « " + mots.join(" ") + " » est un texte, il doit être entre guillemets (ligne " + n +
+                ") : \"" + mots.join(" ") + "\"." });
+            } else {
+              problems.push({ line: n, message: "Il manque une virgule (ou un opérateur comme +) entre « " + toks[k] +
+                " » et « " + toks[k + 1] + " » à la ligne " + n + "." });
+            }
             break;
           }
         }
       }
 
-      var opened = (t.match(/\(/g) || []).length, closed = (t.match(/\)/g) || []).length;
-      if (opened > closed) {
-        problems.push({ line: n, message: "Une parenthèse ouverte n'est pas fermée à la ligne " + n + "." });
-      } else if (closed > opened) {
-        problems.push({ line: n, message: "Il y a une parenthèse fermante en trop à la ligne " + n + "." });
-      }
+      [["(", ")", "Une parenthèse ouverte", "une parenthèse fermante"], ["[", "]", "Un crochet ouvert", "un crochet fermant"],
+       ["{", "}", "Une accolade ouverte", "une accolade fermante"]].forEach(function (b) {
+        var o = t.split(b[0]).length - 1, f = t.split(b[1]).length - 1;
+        if (o > f) problems.push({ line: n, message: b[2] + " « " + b[0] + " » n'est pas " + (b[0] === "(" ? "fermée" : "fermé") + " à la ligne " + n + "." });
+        else if (f > o) problems.push({ line: n, message: "Il y a " + b[3] + " « " + b[1] + " » en trop à la ligne " + n + "." });
+      });
       if (blockHeader.test(t) && !/:\s*$/.test(t)) {
         problems.push({ line: n, message: "Il manque les deux-points « : » à la fin de la ligne " + n + "." });
       }
@@ -305,10 +410,14 @@
   function findIndentProblem(code) {
     var lines = hideTripleQuotes(code || "").split("\n");
     var prev = null; // dernière ligne de code : {indent, text}
+    var ouverts = 0;  // parenthèses / crochets / accolades encore ouverts : la ligne suivante continue la même instruction
     for (var i = 0; i < lines.length; i++) {
       var n = i + 1;
       var t = lines[i].replace(/\t/g, "    ").replace(STRING_RE, '""').replace(/#.*$/, "").replace(/\s+$/, "");
       if (!t.trim()) continue;
+      var suite = ouverts > 0;
+      ouverts = Math.max(0, ouverts + (t.match(/[([{]/g) || []).length - (t.match(/[)\]}]/g) || []).length);
+      if (suite) continue;          // ligne de continuation : décalage libre
       var indent = t.length - t.replace(/^\s+/, "").length;
       var afterHeader = prev && /:$/.test(prev.text);
       var expected = null;
@@ -413,6 +522,31 @@
     }
     var lineText = line && lines[line - 1] ? lines[line - 1].replace(STRING_RE, '""') : "";
     var isCall = new RegExp("(^|[^\\w.])" + name + "\\s*\\(").test(lineText);
+    var src = (code || "").replace(STRING_RE, '""');
+    var tortueImportee = /^\s*from\s+turtle\s+import\b/m.test(src);
+    var COMMANDES_TORTUE = KNOWN_NAMES.slice(KNOWN_NAMES.indexOf("forward"));
+
+    // commande de la tortue sans « from turtle import * »
+    if (isCall && COMMANDES_TORTUE.indexOf(name) >= 0 && !tortueImportee) {
+      return global.TURTLE_MODULE_SRC
+        ? name + "() est une commande de la tortue" + where + " : ajoutez « from turtle import * » au début du programme."
+        : name + "() est une commande de la tortue, qui n'est pas disponible dans cet exercice" + where + ".";
+    }
+    // « t.forward(10) » sans Turtle()
+    var pt = new RegExp("(^|[^\\w.])" + name + "\\.([A-Za-z_]\\w*)\\s*\\(").exec(lineText);
+    if (pt && global.TURTLE_MODULE_SRC && COMMANDES_TORTUE.indexOf(pt[2]) >= 0) {
+      return "Dans ce cours, on écrit les commandes directement, sans « " + name + ". » devant" + where + " : écrivez " + pt[2] + "(…).";
+    }
+    var jamaisDefini = !new RegExp("^\\s*(" + name + "\\s*=(?!=)|def\\s+" + name + "\\b|for\\s+" + name + "\\s+in\\b)", "m").test(src);
+    // couleur sans guillemets : color(red)
+    var coul = new RegExp("\\b(color|pencolor|fillcolor|bgcolor|dot)\\s*\\([^)]*\\b" + name + "\\b").exec(lineText);
+    if (coul && jamaisDefini) {
+      return "Pour une couleur, il faut des guillemets" + where + " : " + coul[1] + "(\"" + name + "\").";
+    }
+    // texte sans guillemets : print(Bonjour)
+    var txt = new RegExp("\\b(print|write)\\s*\\([^)]*\\b" + name + "\\b").test(lineText);
+    var texteSansGuillemets = txt && jamaisDefini && !similarName(name, code) && name.length >= 4 &&
+      ["math", "random", "time", "turtle"].indexOf(name) < 0;
 
     // Défini plus bas dans le programme ?
     var defLine = 0, setLine = 0;
@@ -437,6 +571,9 @@
     if (setLine) {
       return "La variable « " + name + " » est utilisée" + where + " avant de recevoir sa valeur : elle ne la reçoit que plus bas, ligne " +
         setLine + ".";
+    }
+    if (texteSansGuillemets) {
+      return "La variable « " + name + " » n'existe pas" + where + ". Si c'est un texte, mettez-le entre guillemets : \"" + name + "\".";
     }
     return "La variable « " + name + " » n'existe pas" + where + " : elle n'a reçu aucune valeur." + (tip ||
       " Donnez-lui d'abord une valeur avec =, et vérifiez l'orthographe et les majuscules.");
@@ -465,6 +602,43 @@
   /* Erreurs fréquentes (types, appels, conversions…) traduites en français ; null si inconnue. */
   function translateCommon(raw, where, code) {
     var m;
+    if ((m = raw.match(/'(\w+)' object is not iterable/))) {
+      return "Erreur de type" + where + " : on ne peut pas parcourir " + typeName(m[1]) + " avec for. " +
+        "Pour répéter plusieurs fois, écrivez par exemple for i in range(5):";
+    }
+    if ((m = raw.match(/module '(\w+)' has no attribute '(\w+)'/))) {
+      return "« " + m[2] + " » n'existe pas dans le module " + m[1] + where + ". Vérifiez l'orthographe.";
+    }
+    if ((m = raw.match(/'(\w+)' object has no attribute '(\w+)'/))) {
+      if (m[1] === "NoneType") return "La valeur vaut None (aucune valeur)" + where + " : on ne peut pas utiliser « ." + m[2] + " » dessus.";
+      return "« ." + m[2] + " » n'existe pas pour " + typeName(m[1]) + where + ". Vérifiez l'orthographe.";
+    }
+    if (/can only concatenate tuple/.test(raw)) {
+      return "Erreur de type" + where + " : une des valeurs contient plusieurs nombres séparés par une virgule (un tuple). " +
+        "Attention : les nombres à virgule s'écrivent avec un point, par exemple 3.5 et non 3,5.";
+    }
+    if ((m = raw.match(/'(\w+)' (?:object )?does not support item assignment/))) {
+      return "Erreur de type" + where + " : on ne peut pas modifier un élément d" + (m[1] === "str" ? "'un texte (str) : un texte ne se modifie pas, il faut en créer un nouveau." : "e " + typeName(m[1]) + ".");
+    }
+    if ((m = raw.match(/(int|float)\(\) argument must be [^']*'(\w+)'/))) {
+      return "Erreur de type" + where + " : " + m[1] + "() ne peut pas transformer " + typeName(m[2]) + " en nombre.";
+    }
+    if (/a float is required/.test(raw)) {
+      return "Erreur de type" + where + " : il faut ici un nombre, et non un texte ou une autre valeur.";
+    }
+    if ((m = raw.match(/(list|string|tuple) indices must be integers(?: or slices)?, not (\w+)/))) {
+      return "Erreur de type" + where + " : la position dans " + (m[1] === "string" ? "un texte" : "une liste") +
+        " doit être un nombre entier (int), et non " + typeName(m[2]) + ".";
+    }
+    if (/takes no keyword arguments/.test(raw)) {
+      var ln = (raw.match(/on line (\d+)/) || [])[1], txt = ln ? String(code || "").split("\n")[ln - 1] || "" : "";
+      var k = txt.match(/([A-Za-z_]\w*)\s*\([^)]*?\b([A-Za-z_]\w*)\s*=(?!=)/);
+      return (k ? k[1] + "() n'accepte pas la forme « " + k[2] + "=… » ici" : "Cette commande n'accepte pas la forme « nom=valeur » ici") +
+        where + " : écrivez seulement les valeurs, dans l'ordre.";
+    }
+    if ((m = raw.match(/^KeyError: (.*?)(?: on line \d+)?$/))) {
+      return "Clé introuvable" + where + " : la clé « " + m[1].replace(/^'(.*)'$/, "$1") + " » n'existe pas dans ce dictionnaire.";
+    }
     // --- Erreurs de type ---
     if ((m = raw.match(/unsupported operand type\(s\) for ([^:]+): '(\w+)' and '(\w+)'/))) {
       return "Erreur de type" + where + " : on ne peut pas utiliser " + m[1].trim() + " entre " + typeName(m[2]) +
@@ -568,9 +742,13 @@
     var detail = raw.replace(/\s*on line \d+\.?\s*$/, "");
     var msg, common;
 
-    if (/TimeLimitError/.test(raw)) {
+    if (/'return' outside function/.test(raw)) {
+      msg = "« return » ne peut être utilisé que dans une commande (def)" + where + ".";
+    } else if (/RecursionError|Maximum call stack/.test(raw)) {
+      msg = "Trop d'appels imbriqués" + where + " : une commande s'appelle elle-même sans jamais s'arrêter.";
+    } else if (/TimeLimitError/.test(raw)) {
       msg = "Le programme met trop de temps à s'exécuter : y a-t-il une boucle qui ne s'arrête jamais ?";
-    } else if (/La tortue|attend un nombre|Couleur invalide|entre les parenthèses/.test(raw) ||
+    } else if (/La tortue|attend un nombre|attend deux nombres|Couleur invalide|entre les parenthèses/.test(raw) ||
                (global.Jeu && /^RuntimeError: Robi /.test(raw))) { // messages du jeu Robi (seulement si jeu.js est chargé)
       msg = detail.replace(/^\w+Error:\s*/, "") + where + ".";
     } else if ((m = raw.match(/NameError: name '(\w+)' is not defined/))) {

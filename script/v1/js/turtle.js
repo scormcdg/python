@@ -127,7 +127,11 @@
     function num(v, fname) {
       var n = js(v);
       if (typeof n !== "number" || isNaN(n)) {
-        var ex = /^(left|right|lt|rt|setheading|seth)$/.test(fname) ? 90 : 100;
+        if (/2$/.test(fname)) {          // goto(x, y) : deux nombres
+          fname = fname.slice(0, -1);
+          throw new Sk.builtin.TypeError(fname + "() attend deux nombres, par exemple " + fname + "(100, 50)");
+        }
+        var ex = /^(left|right|lt|rt|setheading|seth)$/.test(fname) ? 90 : /^(width|pensize)$/.test(fname) ? 3 : 100;
         throw new Sk.builtin.TypeError(fname + "() attend un nombre, par exemple " + fname + "(" + ex + ")");
       }
       return n;
@@ -184,7 +188,7 @@
         }
         return [p[0], p[1]];
       }
-      return [num(x, fname), num(y, fname)];
+      return [num(x, fname + "2"), num(y, fname + "2")];
     }
 
     // ---- Déplacements ----
@@ -265,9 +269,14 @@
       R.fillColor = colorFromArgs(args, "fillcolor");
       return none;
     }, 3);
-    def(["width", "pensize"], function (w) {
+    def(["width"], function (w) {
       if (absent(w)) return py(R.width);
       R.width = num(w, "width");
+      return none;
+    });
+    def(["pensize"], function (w) {
+      if (absent(w)) return py(R.width);
+      R.width = num(w, "pensize");
       return none;
     });
 
