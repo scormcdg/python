@@ -205,7 +205,15 @@
       var toks = raw.match(TOKEN_RE) || [];
       var cut = toks.indexOf("#");
       if (cut >= 0) toks = toks.slice(0, cut);
-      if (toks[0] === "print" && toks.length > 1 && toks[1] !== "(") {
+      var premierMot = toks.length > 1 && /^[A-Za-z_]\w*$/.test(toks[0]) && !KEYWORDS.test(toks[0]) && toks[0] !== "print";
+      var motInconnu = premierMot && (isValueToken(toks[1]) || (toks[1] === ":" && motCleProche(toks[0], t)));
+      if (motInconnu) {
+        // « ilif a == … », « fro turtle import * », « fore i in … », « esle: » : premier mot mal écrit
+        var mot = motCleProche(toks[0], t);
+        problems.push({ line: n, message: mot
+          ? "« " + toks[0] + " » n'est pas un mot de Python (ligne " + n + "). Vouliez-vous écrire « " + mot + " » ?"
+          : "Python ne comprend pas le début de la ligne " + n + " : « " + toks[0] + " " + toks[1] + " ». Vérifiez l'orthographe de « " + toks[0] + " »." });
+      } else if (toks[0] === "print" && toks.length > 1 && toks[1] !== "(") {
         problems.push({ line: n, message: "print s'écrit avec des parenthèses (ligne " + n + ") : par exemple print(\"Bonjour\")." });
       } else {
         for (var k = 0; k + 1 < toks.length; k++) {
@@ -286,6 +294,32 @@
       if (problems[i].line === reportedLine) return problems[i];
     }
     return problems[0];
+  }
+
+  /* Mot-clé de Python proche d'un mot mal écrit (une lettre de plus, de moins, changée, ou deux lettres inversées). */
+  var MOTS_CLES = ["if", "elif", "else", "for", "while", "def", "from", "import", "return", "in", "not", "and", "or", "pass", "break", "continue"];
+  function motCleProche(m, ligne) {
+    var bas = m.toLowerCase();
+    if (MOTS_CLES.indexOf(bas) >= 0) return bas;                 // « If », « For » : majuscule en trop
+    function dist(a, b) {
+      var d = [];
+      for (var i = 0; i <= a.length; i++) { d[i] = [i]; }
+      for (var j = 0; j <= b.length; j++) { d[0][j] = j; }
+      for (i = 1; i <= a.length; i++) {
+        for (j = 1; j <= b.length; j++) {
+          var c = a[i - 1] === b[j - 1] ? 0 : 1;
+          d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + c);
+          if (i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1]) d[i][j] = Math.min(d[i][j], d[i - 2][j - 2] + 1);
+        }
+      }
+      return d[a.length][b.length];
+    }
+    var proches = MOTS_CLES.filter(function (w) { return w.length >= 3 && bas.length >= 3 && dist(bas, w) === 1; });
+    if (proches.length < 2) return proches[0] || null;
+    // plusieurs possibilités (« fro » : for ou from) : on regarde le reste de la ligne
+    ligne = " " + (ligne || "") + " ";
+    var prefere = /\simport\s/.test(ligne) ? "from" : /\sin\s/.test(ligne) ? "for" : null;
+    return prefere && proches.indexOf(prefere) >= 0 ? prefere : proches[0];
   }
 
   /* Noms connus des élèves, pour proposer une correction (« Forward » → « forward »). */
