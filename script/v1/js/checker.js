@@ -232,7 +232,17 @@
   var refCache = {};
 
   /* Clé d'un dessin testé : la commande et ses valeurs, ex. "spirale(10,50)" */
-  function targetKey(c) { return c.target + (c.args ? "(" + c.args.join(",") + ")" : ""); }
+  /*
+   * Réponses données à input() pendant la vérification : celles de la règle (c.inputs),
+   * sinon celles de l'exercice (ex.inputs), sinon aucune (input() demande à l'élève, comme avant).
+   */
+  function inputsOf(c, ex) { return (c && c.inputs) || ex.inputs || null; }
+  function inputsKey(inputs) { return inputs ? JSON.stringify(inputs.map(String)) : ""; }
+  function runOpts(inputs) { return inputs ? { inputs: inputs } : undefined; }
+
+  function targetKey(c) {
+    return c.target + (c.args ? "(" + c.args.join(",") + ")" : "") + (c.inputs ? "|" + inputsKey(c.inputs) : "");
+  }
 
   function shapeTargets(ex) {
     var t = {};
@@ -240,26 +250,73 @@
     return Object.keys(t).map(function (k) { return t[k]; });
   }
 
+  /* Couleurs écrites de la même façon : "#ff0000", "red", "rgb(255,0,0)" → "#ff0000" */
+  var ctxCouleur = null;
+  function normColor(c) {
+    if (!global.document) return String(c);
+    if (!ctxCouleur) ctxCouleur = global.document.createElement("canvas").getContext("2d");
+    ctxCouleur.fillStyle = "#000000";
+    ctxCouleur.fillStyle = String(c);
+    return ctxCouleur.fillStyle;
+  }
+  /* Couleurs réellement utilisées par le dernier programme : traits dessinés et remplissages */
+  function usedColors() {
+    var T = global.TurtleRec, start = 0, pen = {}, fill = {};
+    for (var i = T.path.length - 1; i >= 0; i--) { if (T.path[i].type === "clear") { start = i + 1; break; } }
+    T.segments().forEach(function (s) { pen[normColor(s.color)] = true; });
+    T.path.slice(start).forEach(function (m) { if (m.type === "fill") fill[normColor(m.color)] = true; });
+    return { pen: Object.keys(pen).sort(), fill: Object.keys(fill).sort() };
+  }
+  function sameList(a, b) { return a.length === b.length && a.every(function (x, i) { return x === b[i]; }); }
+
+  /* Exécution du programme entier avec des réponses données : dessin, couleurs, texte affiché */
+  function runProgram(code, inputs) {
+    return global.PyEngine.run(code, null, runOpts(inputs)).then(function (r) {
+      return { run: r, segs: global.TurtleRec.segments(), colors: usedColors(), output: r.output, printed: r.printed };
+    });
+  }
+
+  /* Règles qui portent sur le programme entier (dessin, couleurs, affichage) */
+  function isProgramCheck(c) {
+    return (c.kind === "shape" && c.target === "<program>") || c.kind === "colors" || c.kind === "output";
+  }
+
   /* Dessins de référence, obtenus en exécutant la (ou les) solution(s). */
   function getReferences(ex) {
     if (refCache[ex.id]) return Promise.resolve(refCache[ex.id]);
     var targets = shapeTargets(ex);
     var refs = {};
+    var progInputs = {}; // réponses distinctes utilisées par les règles « programme entier »
     targets.forEach(function (c) { refs[targetKey(c)] = []; });
+    (ex.checks || []).forEach(function (c) {
+      if (c.kind === "colors") refs["colors|" + inputsKey(inputsOf(c, ex))] = [];
+      if (isProgramCheck(c)) progInputs[inputsKey(inputsOf(c, ex))] = inputsOf(c, ex);
+    });
     var chain = Promise.resolve();
     (ex.solutions || []).forEach(function (sol) {
       chain = chain.then(function () {
-        return global.PyEngine.run(sol).then(function (r) {
+        return global.PyEngine.run(sol, null, runOpts(ex.inputs)).then(function (r) {
           if (r.error) throw new Error("Solution de référence invalide (" + ex.id + ") : " + r.error.raw);
-          var programSegs = global.TurtleRec.segments();
           var inner = Promise.resolve();
           targets.forEach(function (tc) {
             var t = tc.target, key = targetKey(tc);
-            if (t === "<program>") { refs[key].push(programSegs); return; }
+            if (t === "<program>") return;
             inner = inner.then(function () {
               return global.PyEngine.callFunction(r.module, t, tc.args).then(function (c) {
                 if (c.error) throw new Error("Solution de référence invalide (" + ex.id + "/" + key + ") : " + c.error.raw);
                 refs[key].push(global.TurtleRec.segments());
+              });
+            });
+          });
+          // Programme entier, une fois par jeu de réponses
+          Object.keys(progInputs).forEach(function (ik) {
+            inner = inner.then(function () {
+              return runProgram(sol, progInputs[ik]).then(function (p) {
+                if (p.run.error) throw new Error("Solution de référence invalide (" + ex.id + ", réponses " + ik + ") : " + p.run.error.raw);
+                targets.forEach(function (tc) {
+                  if (tc.target === "<program>" && inputsKey(inputsOf(tc, ex)) === ik) refs[targetKey(tc)].push(p.segs);
+                });
+                if (refs["colors|" + ik]) refs["colors|" + ik].push(p.colors);
               });
             });
           });
@@ -270,9 +327,24 @@
     return chain.then(function () { refCache[ex.id] = refs; return refs; });
   }
 
+  function reponsesTexte(inputs) {
+    return inputs ? " (réponses données : " + inputs.join(", ") + ")" : "";
+  }
+  function colorsMessage(c, inputs, student, ref) {
+    var parts = [];
+    if (!sameList(student.pen, ref.pen)) parts.push("du trait");
+    if (!sameList(student.fill, ref.fill)) parts.push("du remplissage");
+    var debut = inputs ? "Avec les réponses " + inputs.join(", ") + ", la" : "La";
+    return debut + (parts.length > 1 ? " couleur du trait et celle du remplissage ne sont pas les bonnes."
+      : " couleur " + (parts[0] || "") + " n'est pas la bonne.") + (c.fail ? " " + c.fail : "");
+  }
+
   function shapeMessage(check, res) {
     var appel = check.target + "(" + (check.args || []).join(", ") + ")";
-    var who = check.target === "<program>" ? "Le dessin de votre programme" : "Le dessin de " + appel;
+    var who = check.target === "<program>" ? "Le dessin de votre programme" + reponsesTexte(check.inputs) : "Le dessin de " + appel;
+    if (check.target === "<program>" && res.reason === "error") {
+      return "Le programme provoque une erreur" + reponsesTexte(check.inputs) + " : " + res.error.message;
+    }
     switch (res.reason) {
       case "empty":
         return check.target === "<program>"
@@ -311,12 +383,20 @@
   function checkExercise(ex, code) {
     var E = global.PyEngine, T = global.TurtleRec;
     return getReferences(ex).then(function (refs) {
-      return E.run(code).then(function (run) {
+      return E.run(code, null, runOpts(ex.inputs)).then(function (run) {
         var programPath = T.snapshot();
         if (run.error) {
           return { ok: false, error: run.error, results: [], programPath: programPath, output: run.output };
         }
         var programSegs = T.segments();
+        // Programme entier avec d'autres réponses : exécuté une fois par jeu de réponses
+        var progRuns = {};
+        progRuns[inputsKey(ex.inputs)] = Promise.resolve({ run: run, segs: programSegs, colors: usedColors(), output: run.output, printed: run.printed });
+        function programWith(inputs) {
+          var k = inputsKey(inputs);
+          if (!progRuns[k]) progRuns[k] = runProgram(code, inputs);
+          return progRuns[k];
+        }
         var src = analyzeSource(code);
         var results = [];
         var badParams = {}; // commandes dont les paramètres sont faux : inutile de les tester
@@ -364,6 +444,34 @@
               results.push({ id: c.id, label: c.label, ok: ok2, message: msg });
               return;
             }
+            if (c.kind === "output") {
+              // texte affiché par print() (sans les questions et réponses de input()) : re = expression régulière
+              var inO = inputsOf(c, ex);
+              return programWith(inO).then(function (p) {
+                if (p.run.error) {
+                  results.push({ id: c.id, label: c.label, ok: false,
+                    message: "Le programme provoque une erreur" + reponsesTexte(inO) + " : " + p.run.error.message });
+                  return;
+                }
+                var okO = new RegExp(c.re, c.flags || "").test(p.printed != null ? p.printed : p.output);
+                results.push({ id: c.id, label: c.label, ok: okO, message: okO ? null : c.fail });
+              });
+            }
+            if (c.kind === "colors") {
+              // couleurs du trait et du remplissage, comparées à celles de la solution
+              var inC = inputsOf(c, ex);
+              return programWith(inC).then(function (p) {
+                if (p.run.error) {
+                  results.push({ id: c.id, label: c.label, ok: false,
+                    message: "Le programme provoque une erreur" + reponsesTexte(inC) + " : " + p.run.error.message });
+                  return;
+                }
+                var list = refs["colors|" + inputsKey(inC)] || [];
+                var okC = list.some(function (r) { return sameList(p.colors.pen, r.pen) && sameList(p.colors.fill, r.fill); });
+                results.push({ id: c.id, label: c.label, ok: okC,
+                  message: okC ? null : (list.length ? colorsMessage(c, inC, p.colors, list[0]) : c.fail) });
+              });
+            }
             if (c.kind === "shape") {
               var getSegs;
               if (c.target !== "<program>" && badParams[c.target]) {
@@ -372,7 +480,9 @@
                 return;
               }
               if (c.target === "<program>") {
-                getSegs = Promise.resolve({ segs: programSegs });
+                getSegs = programWith(inputsOf(c, ex)).then(function (p) {
+                  return p.run.error ? { error: p.run.error } : { segs: p.segs };
+                });
               } else if (!E.getFunction(run.module, c.target)) {
                 getSegs = Promise.resolve({ missing: true });
               } else {

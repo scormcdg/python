@@ -45,13 +45,32 @@
     });
   }
 
-  function configure(output, getOutput) {
+  /*
+   * Réponses prévues (vérification) : input() reçoit les réponses une à une, sans rien demander à l'élève.
+   * S'il pose plus de questions que prévu, l'exécution s'arrête (ctx.trop).
+   */
+  function scriptedInput(inputs, out, ctx) {
+    var i = 0;
+    return function (prompt) {
+      out(prompt == null ? "" : String(prompt));
+      if (i >= inputs.length) {
+        ctx.trop = true;
+        throw new global.Sk.builtin.RuntimeError("trop de questions");
+      }
+      var rep = String(inputs[i++]);
+      out(rep + "\n");
+      return rep;
+    };
+  }
+
+  function configure(output, getOutput, inputs, ctx, echo) {
     var Sk = global.Sk;
     var out = output || function () {};
     Sk.configure({
       output: out,
       inputfunTakesPrompt: true,
-      inputfun: function (prompt) { return askInConsole(prompt, out, getOutput || function () { return ""; }); },
+      inputfun: inputs ? scriptedInput(inputs, echo || out, ctx) :
+        function (prompt) { return askInConsole(prompt, out, getOutput || function () { return ""; }); },
       read: function (path) {
         if (/^src\/lib\/turtle(\.js|\.py|\/)/.test(path)) {
           if (global.TURTLE_MODULE_SRC && path === "src/lib/turtle.js") return global.TURTLE_MODULE_SRC;
@@ -168,20 +187,33 @@
     return null;
   }
 
-  function run(code, onOutput) {
+  /* options.inputs (facultatif) : réponses données à input(), dans l'ordre (vérification). */
+  function run(code, onOutput, options) {
     var Sk = global.Sk;
     var output = "";
+    var printed = ""; // seulement ce qu'affiche print() (sans les questions et réponses de input())
+    var inputs = options && options.inputs;
+    var ctx = { trop: false };
     if (global.TurtleRec) global.TurtleRec.reset(); // la tortue est facultative
     var dup = findIndentProblem(code) || findForbiddenImport(code) || findDuplicateDef(code) || findShadowedName(code);
     if (dup) return Promise.resolve({ module: null, error: dup, output: "" });
-    configure(function (t) { output += t; if (onOutput) onOutput(t); }, function () { return output; });
+    configure(function (t) { output += t; printed += t; if (onOutput) onOutput(t); }, function () { return output; }, inputs, ctx,
+      function (t) { output += t; if (onOutput) onOutput(t); });
     Sk.execStart = Date.now();
     return Sk.misceval
       .asyncToPromise(function () {
         return Sk.importMainWithBody("<stdin>", false, code, true);
       })
-      .then(function (mod) { return { module: mod, error: null, output: output }; })
-      .catch(function (err) { return { module: null, error: translateError(err, code), output: output }; });
+      .then(function (mod) { return { module: mod, error: null, output: output, printed: printed }; })
+      .catch(function (err) {
+        if (ctx.trop) {
+          var n = inputs.length;
+          return { module: null, output: output, error: { line: null, raw: "TooManyInputs",
+            message: "Le programme pose trop de questions avec input() : il doit en poser " + n + " (" +
+              (n > 1 ? "une pour chaque réponse demandée dans l'énoncé" : "une seule") + ")." } };
+        }
+        return { module: null, error: translateError(err, code), output: output };
+      });
   }
 
   /* Appelle une commande (sans argument) définie par l'élève, tortue remise à zéro. */
@@ -778,6 +810,9 @@
       msg = "Trop d'appels imbriqués" + where + " : une commande s'appelle elle-même sans jamais s'arrêter.";
     } else if (/TimeLimitError/.test(raw)) {
       msg = "Le programme met trop de temps à s'exécuter : y a-t-il une boucle qui ne s'arrête jamais ?";
+    } else if (/composantes de la couleur/.test(raw)) {
+      var cc = detail.replace(/^\w+Error:\s*/, ""), k = cc.indexOf(" : ");
+      msg = cc.slice(0, k) + where + cc.slice(k) + ".";
     } else if (/La tortue|attend un nombre|attend deux nombres|Couleur invalide|entre les parenthèses/.test(raw) ||
                (global.Jeu && /^RuntimeError: Robi /.test(raw))) { // messages du jeu Robi (seulement si jeu.js est chargé)
       msg = detail.replace(/^\w+Error:\s*/, "") + where + ".";

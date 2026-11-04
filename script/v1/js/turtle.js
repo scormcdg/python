@@ -161,9 +161,9 @@
           var table = (typeof window !== "undefined" && window.TURTLE_COLORS) || {};
           if (table[nom]) c = table[nom];
         }
-        else if (Array.isArray(v) && v.length === 3) c = rgb(v, fname);
+        else if (Array.isArray(v) && v.length === 3) c = rgbOrText(v, fname);
       } else if (args.length === 3) {
-        c = rgb(args.map(js), fname);
+        c = rgbOrText(args.map(js), fname);
       }
       if (c === null || !R.validColor(c)) {
         throw new Sk.builtin.TypeError(
@@ -171,6 +171,16 @@
         );
       }
       return c;
+    }
+    /* Trois composantes données comme textes (souvent input() sans int()) : message précis */
+    function rgbOrText(v, fname) {
+      if (v.some(function (c) { return typeof c === "string" && /^\s*-?\d+(\.\d*)?\s*$/.test(c); })) {
+        throw new Sk.builtin.TypeError(
+          "Dans " + fname + "(), les trois composantes de la couleur doivent être des nombres, pas des textes : " +
+          "transformez les réponses de input() avec int(), par exemple r = int(input(\"Rouge ? \"))"
+        );
+      }
+      return rgb(v, fname);
     }
     function rgb(v, fname) {
       if (!v.every(function (c) { return typeof c === "number" && c >= 0; })) return null;
