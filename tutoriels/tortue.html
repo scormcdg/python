@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tutoriel tortue</title>
+<style>
+@font-face { font-family: "Atkinson Hyperlegible"; src: url("../script/v1/vendor/fonts/atkinson-hyperlegible-latin-400-normal.woff2") format("woff2"); font-weight: 400; font-display: swap; }
+@font-face { font-family: "Atkinson Hyperlegible"; src: url("../script/v1/vendor/fonts/atkinson-hyperlegible-latin-700-normal.woff2") format("woff2"); font-weight: 700; font-display: swap; }
+@font-face { font-family: "JetBrains Mono"; src: url("../script/v1/vendor/fonts/jetbrains-mono-latin-400-normal.woff2") format("woff2"); font-weight: 400; font-display: swap; }
+:root { --fond: #f6f7fb; --papier: #ffffff; --texte: #1e2430; --doux: #5a6478; --bordure: #d9dfea; --accent: #2a4ba0; --code-fond: #f3f5fa; --mono: "JetBrains Mono", ui-monospace, Consolas, monospace; }
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; background: var(--fond); color: var(--texte); font: 17px/1.6 "Atkinson Hyperlegible", system-ui, sans-serif; }
+main { max-width: 860px; margin: 0 auto; padding: 32px 20px 64px; }
+h1 { font-size: 2rem; margin: 0 0 4px; color: var(--accent); }
+.sous-titre { color: var(--doux); margin: 0 0 20px; }
+nav.sommaire { background: var(--papier); border: 1px solid var(--bordure); border-radius: 10px; padding: 12px 18px; margin-bottom: 28px; }
+nav.sommaire ol { margin: 4px 0 0; padding-left: 22px; columns: 2; column-gap: 28px; }
+nav.sommaire a { color: var(--accent); text-decoration: none; }
+nav.sommaire a:hover { text-decoration: underline; }
+h2 { font-size: 1.45rem; margin: 40px 0 10px; padding-top: 6px; border-top: 2px solid var(--bordure); color: var(--accent); }
+h3 { font-size: 1.12rem; margin: 26px 0 8px; }
+code, pre { font-family: var(--mono); font-variant-ligatures: none; font-size: 0.88em; }
+:not(pre) > code { background: var(--code-fond); border: 1px solid #e4e8f1; border-radius: 4px; padding: 0 4px; white-space: nowrap; }
+pre { position: relative; background: var(--code-fond); border: 1px solid var(--bordure); border-radius: 8px; padding: 12px 14px; overflow-x: auto; line-height: 1.5; }
+pre .copier { position: absolute; top: 6px; right: 6px; font: 13px "Atkinson Hyperlegible", sans-serif; background: #fff; border: 1px solid var(--bordure); border-radius: 5px; padding: 2px 8px; cursor: pointer; color: var(--doux); }
+pre .copier:hover { color: var(--accent); border-color: var(--accent); }
+.tableau { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; background: var(--papier); font-size: 0.95rem; margin: 8px 0 14px; }
+th, td { border: 1px solid var(--bordure); padding: 6px 10px; text-align: left; vertical-align: top; }
+th { background: #eef1f8; }
+.pastille { display: inline-block; width: 16px; height: 16px; border-radius: 4px; border: 1px solid rgba(0,0,0,.25); vertical-align: -3px; margin-left: 6px; }
+.nuancier { display: flex; flex-wrap: wrap; gap: 8px; margin: 6px 0 10px; }
+.nuancier span { display: inline-flex; align-items: center; gap: 6px; background: var(--papier); border: 1px solid var(--bordure); border-radius: 6px; padding: 3px 9px 3px 4px; font: 14px var(--mono); }
+.nuancier i { display: inline-block; width: 22px; height: 22px; border-radius: 4px; border: 1px solid rgba(0,0,0,.25); }
+footer { margin-top: 48px; color: var(--doux); font-size: 0.9rem; }
+@media (max-width: 600px) { nav.sommaire ol { columns: 1; } body { font-size: 16px; } }
+@media print { pre .copier, nav.sommaire { display: none; } body { background: #fff; } }
+</style>
+</head>
+<body>
+<main>
+<h1>Tutoriel tortue</h1>
+<p class="sous-titre">La tortue Python des exercices du cours : commandes, couleurs, remplissage et erreurs fréquentes.</p>
+<nav class="sommaire"><strong>Sommaire</strong><ol><li><a href="#demarrer">Démarrer</a></li><li><a href="#les-commandes-de-base">Les commandes de base</a></li><li><a href="#les-4-facons-decrire-une-couleur">Les 4 façons d'écrire une couleur</a></li><li><a href="#trait-remplissage-et-fond">Trait, remplissage et fond</a></li><li><a href="#exemples-complets-a-essayer">Exemples complets à essayer</a></li><li><a href="#erreurs-frequentes-et-messages">Erreurs fréquentes et messages</a></li><li><a href="#aide-memoire">Aide-mémoire</a></li></ol></nav>
+<h2 id="demarrer">Démarrer</h2>
+<p>Chaque programme commence par une seule ligne : <code>from turtle import *</code>. Ensuite, on écrit les commandes directement, sans <code>t.</code> devant, et on indente toujours de 4 espaces.</p>
+<pre><code class="language-python">from turtle import *
+
+color(&quot;blue&quot;)
+forward(100)
+left(90)
+forward(100)
+</code></pre>
+<p>On tape le code dans l'éditeur, puis on clique sur Exécuter : la tortue dessine dans la zone de dessin. Elle part du centre (0, 0) et regarde vers la droite.</p>
+<p>Trois règles du cours :</p>
+<ul>
+<li><code>from turtle import *</code> et rien d'autre (pas de <code>import turtle</code>, pas de <code>Turtle()</code> ni de <code>Screen()</code>).</li>
+<li>Pas de <code>t.forward(...)</code> : on écrit <code>forward(...)</code>.</li>
+<li>Les blocs (<code>for</code>, <code>def</code>, <code>if</code>, <code>while</code>) sont indentés de 4 espaces exactement.</li>
+</ul>
+<p>Les commandes <code>done()</code>, <code>mainloop()</code>, <code>exitonclick()</code>, <code>setup()</code> et <code>title()</code> sont acceptées mais ne font rien : inutile de les ajouter.</p>
+<h2 id="les-commandes-de-base">Les commandes de base</h2>
+<p>Cette version connaît les commandes ci-dessous ; les abréviations entre parenthèses font la même chose.</p>
+<table>
+<thead>
+<tr>
+<th>Commande</th>
+<th>Ce qu'elle fait</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>forward(d)</code> (<code>fd</code>)</td>
+<td>avance de d pixels</td>
+</tr>
+<tr>
+<td><code>backward(d)</code> (<code>back</code>, <code>bk</code>)</td>
+<td>recule de d pixels</td>
+</tr>
+<tr>
+<td><code>left(a)</code> (<code>lt</code>) / <code>right(a)</code> (<code>rt</code>)</td>
+<td>tourne de a degrés à gauche / à droite</td>
+</tr>
+<tr>
+<td><code>goto(x, y)</code> (<code>setpos</code>, <code>setposition</code>)</td>
+<td>va au point (x, y)</td>
+</tr>
+<tr>
+<td><code>setx(x)</code> / <code>sety(y)</code></td>
+<td>change seulement x ou y</td>
+</tr>
+<tr>
+<td><code>setheading(a)</code> (<code>seth</code>)</td>
+<td>regarde dans la direction a (0 = droite, 90 = haut)</td>
+</tr>
+<tr>
+<td><code>home()</code></td>
+<td>retourne au centre, regarde à droite</td>
+</tr>
+<tr>
+<td><code>circle(r)</code> / <code>circle(r, angle)</code> / <code>circle(r, angle, n)</code></td>
+<td>cercle de rayon r, arc d'angle donné, ou polygone à n côtés</td>
+</tr>
+<tr>
+<td><code>penup()</code> (<code>pu</code>, <code>up</code>) / <code>pendown()</code> (<code>pd</code>, <code>down</code>)</td>
+<td>lève / pose le stylo</td>
+</tr>
+<tr>
+<td><code>width(e)</code> (<code>pensize</code>)</td>
+<td>épaisseur du trait</td>
+</tr>
+<tr>
+<td><code>dot(taille)</code> / <code>dot(taille, couleur)</code></td>
+<td>point rond</td>
+</tr>
+<tr>
+<td><code>stamp()</code></td>
+<td>laisse l'empreinte de la tortue</td>
+</tr>
+<tr>
+<td><code>write("texte")</code> / <code>write("texte", font=("Arial", 16, "normal"))</code></td>
+<td>écrit un texte</td>
+</tr>
+<tr>
+<td><code>speed(v)</code></td>
+<td>vitesse de 1 (lent) à 10 ; <code>speed(0)</code> = le plus rapide</td>
+</tr>
+<tr>
+<td><code>hideturtle()</code> (<code>ht</code>) / <code>showturtle()</code> (<code>st</code>)</td>
+<td>cache / montre la tortue</td>
+</tr>
+<tr>
+<td><code>shape("turtle")</code>, <code>shapesize(2)</code></td>
+<td>forme et taille de la tortue</td>
+</tr>
+<tr>
+<td><code>clear()</code> / <code>reset()</code></td>
+<td>efface le dessin / efface et remet la tortue au centre</td>
+</tr>
+<tr>
+<td><code>pos()</code>, <code>xcor()</code>, <code>ycor()</code>, <code>heading()</code>, <code>distance(x, y)</code></td>
+<td>donnent la position, l'angle, une distance</td>
+</tr>
+</tbody>
+</table>
+<p>Pas disponibles ici : <code>towards()</code>, <code>colormode()</code>, les clics et touches (<code>onscreenclick</code>, <code>onkey</code>, <code>listen</code>), <code>numinput()</code>/<code>textinput()</code> et <code>ontimer()</code>.</p>
+<h2 id="les-4-facons-decrire-une-couleur">Les 4 façons d'écrire une couleur</h2>
+<p>Une couleur s'écrit de quatre façons ; toutes marchent dans <code>color()</code>, <code>pencolor()</code>, <code>fillcolor()</code>, <code>bgcolor()</code> et <code>dot()</code>. Il n'y a pas de <code>colormode()</code> : la tortue reconnaît seule l'échelle utilisée.</p>
+<table>
+<thead>
+<tr>
+<th>Façon</th>
+<th>Exemple</th>
+<th>À savoir</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Nom anglais</td>
+<td><code>color("orange")</code> <span class="pastille" style="background:#ffa500"></span></td>
+<td>entre guillemets ; en anglais seulement (<code>"red"</code>, pas <code>"rouge"</code>)</td>
+</tr>
+<tr>
+<td>Code hexadécimal</td>
+<td><code>color("#ff8800")</code> ou <code>color("#f80")</code> <span class="pastille" style="background:#ff8800"></span></td>
+<td>commence par <code>#</code> ; majuscules acceptées (<code>"#FF8800"</code>)</td>
+</tr>
+<tr>
+<td>Trois nombres de 0 à 1</td>
+<td><code>color((1, 0.5, 0))</code> <span class="pastille" style="background:#ff8000"></span></td>
+<td>rouge, vert, bleu ; 1 = au maximum, 0.5 = à moitié</td>
+</tr>
+<tr>
+<td>Trois nombres de 0 à 255</td>
+<td><code>color((255, 128, 0))</code> <span class="pastille" style="background:#ff8000"></span></td>
+<td>rouge, vert, bleu ; 255 = au maximum</td>
+</tr>
+</tbody>
+</table>
+<p>Les quatre exemples donnent un orange (presque le même : <code>"orange"</code> est un tout petit peu plus jaune).</p>
+<h3 id="les-noms">Les noms</h3>
+<p>Quelques noms utiles :</p>
+<div class="nuancier">
+<span><i style="background:#000000"></i>"black"</span>
+<span><i style="background:#ffffff"></i>"white"</span>
+<span><i style="background:#bebebe"></i>"gray"</span>
+<span><i style="background:#ff0000"></i>"red"</span>
+<span><i style="background:#ffa500"></i>"orange"</span>
+<span><i style="background:#ffff00"></i>"yellow"</span>
+<span><i style="background:#00ff00"></i>"green"</span>
+<span><i style="background:#006400"></i>"darkgreen"</span>
+<span><i style="background:#0000ff"></i>"blue"</span>
+<span><i style="background:#000080"></i>"navy"</span>
+<span><i style="background:#87ceeb"></i>"skyblue"</span>
+<span><i style="background:#a020f0"></i>"purple"</span>
+<span><i style="background:#ffc0cb"></i>"pink"</span>
+<span><i style="background:#a52a2a"></i>"brown"</span>
+<span><i style="background:#ffd700"></i>"gold"</span>
+<span><i style="background:#ff6347"></i>"tomato"</span>
+<span><i style="background:#40e0d0"></i>"turquoise"</span>
+<span><i style="background:#90ee90"></i>"lightgreen"</span>
+</div>
+
+<p>Beaucoup d'autres noms anglais existent.</p>
+<h3 id="le-code-hexadecimal">Le code hexadécimal</h3>
+<p><code>#rrggbb</code> donne la quantité de rouge, de vert et de bleu, chacune avec deux chiffres de <code>00</code> (rien) à <code>ff</code> (tout). Ainsi <code>"#ff0000"</code> est rouge, <code>"#00ff00"</code> vert, <code>"#000000"</code> noir et <code>"#ffffff"</code> blanc. La forme courte <code>#rgb</code> double chaque chiffre : <code>"#f80"</code> = <code>"#ff8800"</code>.</p>
+<h3 id="les-trois-nombres">Les trois nombres</h3>
+<p>On met les trois nombres entre parenthèses, séparés par des virgules : (rouge, vert, bleu). Si un nombre dépasse 1, la tortue lit l'échelle 0–255 ; sinon, elle lit l'échelle 0–1.</p>
+<ul>
+<li><code>(1, 0.5, 0)</code> : 1 = 255 et 0.5 ≈ 128, donc c'est le même orange que <code>(255, 128, 0)</code>.</li>
+<li><code>(1, 1, 1)</code> est lu de 0 à 1 : c'est du blanc, pas un noir presque total.</li>
+<li>Pour du gris : trois nombres égaux, par exemple <code>(0.5, 0.5, 0.5)</code> ou <code>(128, 128, 128)</code>.</li>
+</ul>
+<p>Astuce : avec l'échelle 0–1, on peut faire varier une couleur dans une boucle.</p>
+<pre><code class="language-python">from turtle import *
+
+speed(0)
+for i in range(10):
+    color((i / 10, 0, 1 - i / 10))
+    forward(30)
+</code></pre>
+<h2 id="trait-remplissage-et-fond">Trait, remplissage et fond</h2>
+<p>La tortue a deux couleurs : celle du trait et celle du remplissage. <code>color()</code> peut changer les deux d'un coup ; <code>pencolor()</code> et <code>fillcolor()</code> en changent une seule.</p>
+<table>
+<thead>
+<tr>
+<th>Commande</th>
+<th>Trait</th>
+<th>Remplissage</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>color("red")</code></td>
+<td>rouge</td>
+<td>rouge</td>
+</tr>
+<tr>
+<td><code>color("red", "blue")</code></td>
+<td>rouge</td>
+<td>bleu</td>
+</tr>
+<tr>
+<td><code>pencolor("red")</code></td>
+<td>rouge</td>
+<td>inchangé</td>
+</tr>
+<tr>
+<td><code>fillcolor("blue")</code></td>
+<td>inchangé</td>
+<td>bleu</td>
+</tr>
+<tr>
+<td><code>bgcolor("lightyellow")</code></td>
+<td>—</td>
+<td>— (colore le fond de la zone de dessin)</td>
+</tr>
+</tbody>
+</table>
+<p>On peut mélanger les façons d'écrire : <code>color("#ff8800", "red")</code> ou <code>color((0, 0, 1), "yellow")</code> marchent.</p>
+<h3 id="remplir-une-forme">Remplir une forme</h3>
+<p>On place le dessin de la forme entre <code>begin_fill()</code> et <code>end_fill()</code>. La forme se remplit au moment de <code>end_fill()</code>, avec la couleur de remplissage choisie avant.</p>
+<pre><code class="language-python">from turtle import *
+
+color(&quot;darkgreen&quot;, &quot;lightgreen&quot;)
+begin_fill()
+for i in range(4):
+    forward(100)
+    left(90)
+end_fill()
+</code></pre>
+<p>Ce programme dessine un carré au bord vert foncé, rempli de vert clair. Si la forme n'est pas fermée, <code>end_fill()</code> la ferme tout droit vers le point de départ.</p>
+<h3 id="le-fond">Le fond</h3>
+<p><code>bgcolor()</code> colore tout le fond, à n'importe quel moment du programme. Les dessins restent par-dessus.</p>
+<h3 id="un-point-de-couleur">Un point de couleur</h3>
+<p><code>dot(20, "red")</code> dessine un disque rouge de 20 pixels, sans changer la couleur du stylo. Sans couleur, <code>dot(20)</code> utilise la couleur du trait.</p>
+<h2 id="exemples-complets-a-essayer">Exemples complets à essayer</h2>
+<p>Chaque exemple utilise une autre façon d'écrire les couleurs. Copiez-le, exécutez-le, puis changez les couleurs.</p>
+<h3 id="1-un-soleil-noms">1. Un soleil (noms)</h3>
+<pre><code class="language-python">from turtle import *
+
+bgcolor(&quot;skyblue&quot;)
+speed(0)
+color(&quot;orange&quot;, &quot;yellow&quot;)
+begin_fill()
+circle(60)
+end_fill()
+</code></pre>
+<h3 id="2-trois-carres-codes-hexadecimaux">2. Trois carrés (codes hexadécimaux)</h3>
+<pre><code class="language-python">from turtle import *
+
+def carre(cote, couleur):
+    fillcolor(couleur)
+    begin_fill()
+    for i in range(4):
+        forward(cote)
+        left(90)
+    end_fill()
+
+pencolor(&quot;#333333&quot;)
+carre(60, &quot;#e63946&quot;)
+forward(80)
+carre(60, &quot;#f4a261&quot;)
+forward(80)
+carre(60, &quot;#2a9d8f&quot;)
+</code></pre>
+<h3 id="3-un-degrade-nombres-de-0-a-1">3. Un dégradé (nombres de 0 à 1)</h3>
+<pre><code class="language-python">from turtle import *
+
+speed(0)
+width(8)
+penup()
+goto(-200, 0)
+pendown()
+for i in range(20):
+    pencolor((i / 20, 0.2, 1 - i / 20))
+    forward(20)
+</code></pre>
+<p>La ligne passe du bleu au rouge : le rouge augmente pendant que le bleu diminue.</p>
+<h3 id="4-des-points-nombres-de-0-a-255">4. Des points (nombres de 0 à 255)</h3>
+<pre><code class="language-python">from turtle import *
+
+speed(0)
+hideturtle()
+penup()
+for i in range(6):
+    dot(40, (255, 40 * i, 0))
+    forward(50)
+</code></pre>
+<p>Les points vont du rouge au jaune, car le vert passe de 0 à 200.</p>
+<h3 id="5-une-fleur-trait-et-remplissage-differents">5. Une fleur (trait et remplissage différents)</h3>
+<pre><code class="language-python">from turtle import *
+
+speed(0)
+color(&quot;purple&quot;, &quot;pink&quot;)
+for i in range(6):
+    begin_fill()
+    circle(50, 60)
+    left(120)
+    circle(50, 60)
+    end_fill()
+    left(60)
+hideturtle()
+</code></pre>
+<h2 id="erreurs-frequentes-et-messages">Erreurs fréquentes et messages</h2>
+<p>Voici les erreurs de couleur les plus courantes, avec le message exact affiché par cette version.</p>
+<table>
+<thead>
+<tr>
+<th>Code écrit</th>
+<th>Problème</th>
+<th>Message affiché</th>
+<th>Correction</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>color(red)</code></td>
+<td>guillemets oubliés</td>
+<td>Pour une couleur, il faut des guillemets (ligne 2) : color("red").</td>
+<td><code>color("red")</code></td>
+</tr>
+<tr>
+<td><code>color("rouge")</code></td>
+<td>nom en français</td>
+<td>Couleur invalide dans color() : utilisez par exemple color("red") ou color("#ff8800") (ligne 2).</td>
+<td><code>color("red")</code></td>
+</tr>
+<tr>
+<td><code>color("ff8800")</code></td>
+<td><code>#</code> oublié</td>
+<td>même message « Couleur invalide »</td>
+<td><code>color("#ff8800")</code></td>
+</tr>
+<tr>
+<td><code>color("red", "bleu")</code></td>
+<td>2e couleur en français</td>
+<td>même message « Couleur invalide »</td>
+<td><code>color("red", "blue")</code></td>
+</tr>
+<tr>
+<td><code>color("red", "blue", "green")</code></td>
+<td>trois couleurs</td>
+<td>même message « Couleur invalide »</td>
+<td>une ou deux couleurs seulement</td>
+</tr>
+<tr>
+<td><code>color((255, 128))</code></td>
+<td>deux nombres au lieu de trois</td>
+<td>même message « Couleur invalide »</td>
+<td><code>color((255, 128, 0))</code></td>
+</tr>
+<tr>
+<td><code>Color("red")</code></td>
+<td>majuscule</td>
+<td>La commande « Color » n'existe pas (ligne 2). Vouliez-vous écrire « color » ?</td>
+<td><code>color("red")</code></td>
+</tr>
+<tr>
+<td><code>colormode(255)</code></td>
+<td>commande absente de cette version</td>
+<td>La commande « colormode » n'existe pas (ligne 2)…</td>
+<td>supprimer la ligne : l'échelle est reconnue seule</td>
+</tr>
+<tr>
+<td><code>begin_fill()</code> sans <code>end_fill()</code></td>
+<td>remplissage jamais terminé</td>
+<td>aucun message, la forme reste vide</td>
+<td>ajouter <code>end_fill()</code> après la forme</td>
+</tr>
+</tbody>
+</table>
+<p>Le numéro de ligne du message indique où chercher. Une forme qui reste vide sans message vient presque toujours d'un <code>end_fill()</code> oublié ou mal indenté (dans la boucle au lieu d'après).</p>
+<h2 id="aide-memoire">Aide-mémoire</h2>
+<pre><code class="language-python">from turtle import *
+
+# 4 façons d'écrire un orange
+color(&quot;orange&quot;)          # nom anglais, entre guillemets
+color(&quot;#ff8800&quot;)         # code hexadécimal, avec #
+color((1, 0.5, 0))       # rouge, vert, bleu de 0 à 1
+color((255, 128, 0))     # rouge, vert, bleu de 0 à 255
+
+# trait et remplissage
+color(&quot;red&quot;)             # trait ET remplissage rouges
+color(&quot;red&quot;, &quot;blue&quot;)     # trait rouge, remplissage bleu
+pencolor(&quot;red&quot;)          # trait seulement
+fillcolor(&quot;blue&quot;)        # remplissage seulement
+bgcolor(&quot;lightyellow&quot;)   # fond
+
+# remplir une forme
+begin_fill()
+circle(50)
+end_fill()
+
+# point de couleur
+dot(20, &quot;red&quot;)
+</code></pre>
+<ul>
+<li>Toujours des guillemets autour d'un nom ou d'un code <code>#</code>.</li>
+<li>Noms en anglais seulement.</li>
+<li>Pas de <code>colormode()</code> : l'échelle 0–1 ou 0–255 est reconnue seule.</li>
+<li><code>speed(0)</code> = le plus rapide.</li>
+</ul>
+</main>
+<script>
+document.querySelectorAll("table").forEach(function (t) { var d = document.createElement("div"); d.className = "tableau"; t.parentNode.insertBefore(d, t); d.appendChild(t); });
+document.querySelectorAll("pre").forEach(function (pre) {
+  var b = document.createElement("button"); b.className = "copier"; b.type = "button"; b.textContent = "Copier";
+  b.onclick = function () {
+    var texte = pre.querySelector("code").innerText;
+    var ok = function () { b.textContent = "Copié !"; setTimeout(function () { b.textContent = "Copier"; }, 1500); };
+    if (navigator.clipboard) navigator.clipboard.writeText(texte).then(ok, function () {});
+  };
+  pre.appendChild(b);
+});
+</script>
+</body>
+</html>
