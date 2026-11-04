@@ -446,15 +446,25 @@
             }
             if (c.kind === "output") {
               // texte affiché par print() (sans les questions et réponses de input()) : re = expression régulière
-              var inO = inputsOf(c, ex);
-              return programWith(inO).then(function (p) {
-                if (p.run.error) {
-                  results.push({ id: c.id, label: c.label, ok: false,
-                    message: "Le programme provoque une erreur" + reponsesTexte(inO) + " : " + p.run.error.message });
-                  return;
-                }
-                var okO = new RegExp(c.re, c.flags || "").test(p.printed != null ? p.printed : p.output);
-                results.push({ id: c.id, label: c.label, ok: okO, message: okO ? null : c.fail });
+              // cases : [{ inputs, re }, …] teste plusieurs jeux de réponses ; sinon un seul (c.inputs, c.re)
+              var cas = c.cases || [{ inputs: c.inputs, re: c.re }];
+              var echec = null;
+              var suite = Promise.resolve();
+              cas.forEach(function (k) {
+                suite = suite.then(function () {
+                  if (echec) return;
+                  var inO = (k.inputs) || ex.inputs || null;
+                  return programWith(inO).then(function (p) {
+                    if (p.run.error) {
+                      echec = "Le programme provoque une erreur" + reponsesTexte(inO) + " : " + p.run.error.message;
+                    } else if (!new RegExp(k.re, c.flags || "").test(p.printed != null ? p.printed : p.output)) {
+                      echec = (c.cases ? "Avec les réponses " + (inO || []).join(", ") + ", l'affichage n'est pas le bon. " : "") + (c.fail || "");
+                    }
+                  });
+                });
+              });
+              return suite.then(function () {
+                results.push({ id: c.id, label: c.label, ok: !echec, message: echec });
               });
             }
             if (c.kind === "colors") {
