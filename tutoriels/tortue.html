@@ -45,7 +45,7 @@ footer { margin-top: 48px; color: var(--doux); font-size: 0.9rem; }
 <p class="sous-titre">La tortue Python des exercices du cours : commandes, couleurs, remplissage et erreurs fréquentes.</p>
 <nav class="sommaire"><strong>Sommaire</strong><ol><li><a href="#demarrer">Démarrer</a></li><li><a href="#les-commandes-de-base">Les commandes de base</a></li><li><a href="#les-4-facons-decrire-une-couleur">Les 4 façons d'écrire une couleur</a></li><li><a href="#trait-remplissage-et-fond">Trait, remplissage et fond</a></li><li><a href="#exemples-complets-a-essayer">Exemples complets à essayer</a></li><li><a href="#erreurs-frequentes-et-messages">Erreurs fréquentes et messages</a></li><li><a href="#aide-memoire">Aide-mémoire</a></li></ol></nav>
 <h2 id="demarrer">Démarrer</h2>
-<p>Chaque programme commence par une seule ligne : <code>from turtle import *</code>. Ensuite, on écrit les commandes directement, sans <code>t.</code> devant, et on indente toujours de 4 espaces.</p>
+<p>Chaque programme commence par une seule ligne : <code>from turtle import *</code>. Ensuite, on écrit les commandes directement et on indente toujours de 4 espaces.</p>
 <pre><code class="language-python">from turtle import *
 
 color(&quot;blue&quot;)
@@ -56,11 +56,10 @@ forward(100)
 <p>On tape le code dans l'éditeur, puis on clique sur Exécuter : la tortue dessine dans la zone de dessin. Elle part du centre (0, 0) et regarde vers la droite.</p>
 <p>Trois règles du cours :</p>
 <ul>
-<li><code>from turtle import *</code> et rien d'autre (pas de <code>import turtle</code>, pas de <code>Turtle()</code> ni de <code>Screen()</code>).</li>
-<li>Pas de <code>t.forward(...)</code> : on écrit <code>forward(...)</code>.</li>
+<li><code>from turtle import *</code> et rien d'autre.</li>
+<li>On écrit les commandes directement : <code>forward(...)</code>.</li>
 <li>Les blocs (<code>for</code>, <code>def</code>, <code>if</code>, <code>while</code>) sont indentés de 4 espaces exactement.</li>
 </ul>
-<p>Les commandes <code>done()</code>, <code>mainloop()</code>, <code>exitonclick()</code>, <code>setup()</code> et <code>title()</code> sont acceptées mais ne font rien : inutile de les ajouter.</p>
 <h2 id="les-commandes-de-base">Les commandes de base</h2>
 <p>Cette version connaît les commandes ci-dessous ; les abréviations entre parenthèses font la même chose.</p>
 <table>
