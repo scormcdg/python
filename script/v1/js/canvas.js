@@ -166,7 +166,8 @@
     if (m.turn || m.type || !m.pen) return;
     var x2 = m.x1 + (m.x2 - m.x1) * t, y2 = m.y1 + (m.y2 - m.y1) * t;
     ctx.strokeStyle = this.inkColor(m.color);
-    ctx.lineWidth = Math.max(1.5, (m.width || 1) * 2 * Math.min(1, this.k + 0.3));
+    // épaisseur en pas de tortue, réduite ou agrandie avec le dessin (comme les longueurs) ; au moins 1 pixel
+    ctx.lineWidth = Math.max(1, (m.width || 1) * this.k);
     ctx.lineCap = "round";
     ctx.beginPath();
     ctx.moveTo(this.tx(m.x1), this.ty(m.y1));
