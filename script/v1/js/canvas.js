@@ -117,8 +117,9 @@
     ctx.restore();
   };
 
+  /* Couleur du trait telle quelle : "black" (couleur par défaut) est un vrai noir, comme dans Python */
   TurtleCanvas.prototype.inkColor = function (c) {
-    return c === "black" ? css("--encre", "#1d2b53") : c;
+    return c;
   };
 
   /* Éléments autres que les traits : remplissage, point, texte, fond, effacement. */
