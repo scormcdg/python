@@ -423,6 +423,7 @@
       barre.appendChild(b);
       return b;
     }
+    if (SERIE.grille) boutonGrille(barre);
     var moins = boutonZoom("−", "Dézoomer", -1);
     var plus = boutonZoom("+", "Zoomer", +1);
     function majBoutons() {
@@ -432,6 +433,34 @@
     }
     majBoutons();
     boutonDessinPleinEcran(barre);
+  }
+
+  /* Bouton grille (seulement si SERIE.grille) : masque ou affiche le quadrillage et les axes. */
+  function boutonGrille(barre) {
+    var b = document.createElement("button");
+    b.type = "button";
+    b.className = "outil-dessin";
+    b.innerHTML = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.3" ' +
+      'aria-hidden="true"><path d="M1.5 1.5h11v11h-11zM5.2 1.5v11M8.8 1.5v11M1.5 5.2h11M1.5 8.8h11"/></svg>';
+    function maj() {
+      var on = state.grille !== false;
+      drawing.opts.grid = on;
+      b.title = on ? "Masquer la grille" : "Afficher la grille";
+      b.setAttribute("aria-label", b.title);
+      b.setAttribute("aria-pressed", on ? "true" : "false");
+      b.style.opacity = on ? "" : "0.55";
+      var e = $("echelle");
+      if (e) e.style.display = on ? "" : "none";
+    }
+    b.addEventListener("click", function () {
+      state.grille = state.grille === false;
+      maj();
+      if (drawing.last) redessiner();
+      else drawing.draw({ path: [], x: 0, y: 0, heading: 0 });
+      saveSoon();
+    });
+    barre.appendChild(b);
+    maj();
   }
 
   function boutonDessinPleinEcran(barre) {
