@@ -455,6 +455,7 @@
     var lines = hideTripleQuotes(code || "").split("\n");
     var prev = null; // dernière ligne de code : {indent, text}
     var ouverts = 0;  // parenthèses / crochets / accolades encore ouverts : la ligne suivante continue la même instruction
+    var pile = [0];   // niveaux d'indentation ouverts, comme les compte Python
     for (var i = 0; i < lines.length; i++) {
       var n = i + 1;
       var t = lines[i].replace(/\t/g, "    ").replace(STRING_RE, '""').replace(/#.*$/, "").replace(/\s+$/, "");
@@ -464,6 +465,16 @@
       if (suite) continue;          // ligne de continuation : décalage libre
       var indent = t.length - t.replace(/^\s+/, "").length;
       var afterHeader = prev && /:$/.test(prev.text);
+      // Le vrai Python refuserait-il aussi cette ligne ? (alors c'est une erreur d'indentation, pas seulement la règle du cours)
+      var haut = pile[pile.length - 1], refusParPython = false;
+      if (afterHeader) {
+        if (indent > haut) pile.push(indent); else refusParPython = true;
+      } else if (indent > haut) {
+        refusParPython = true;
+      } else {
+        while (pile.length > 1 && pile[pile.length - 1] > indent) pile.pop();
+        if (pile[pile.length - 1] !== indent) refusParPython = true;
+      }
       var expected = null;
       if (afterHeader && indent > prev.indent && indent !== prev.indent + INDENT) {
         expected = prev.indent + INDENT;
@@ -473,7 +484,7 @@
       if (expected !== null) {
         return {
           line: n,
-          raw: "IndentationRule",
+          raw: refusParPython ? "IndentationError: règle des 4 espaces" : "IndentationRule",
           message: "La ligne " + n + " est décalée de " + indent + " espace" + (indent > 1 ? "s" : "") +
             " : il en faut " + expected + ". Utilisez toujours 4 espaces par niveau (la touche Tab les met pour vous)."
         };
@@ -856,11 +867,14 @@
   }
 
   /*
-   * Chaque message commence par le type d'erreur : « Erreur de syntaxe : … », « Erreur de type (ligne 3) : … ».
-   * Le type vient de l'erreur Python (raw) ou de la règle du cours qui a trouvé le problème.
+   * Chaque message commence par le type d'erreur : « Erreur de syntaxe : … », « Erreur de type (ligne 3) : … »,
+   * comme l'erreur du vrai Python (raw). Ce que Python accepte mais que le cours refuse commence par « Règle du cours ».
    */
   function typeErreur(raw, msg) {
     if (/^TooManyInputs/.test(raw) || /^RuntimeError: Robi /.test(raw)) return null; // vérification, jeu Robi
+    // Ce que le vrai Python accepte, mais que le cours refuse
+    if (/^(IndentationRule|ImportRule|DuplicateDefinition|ShadowRule)/.test(raw) ||
+        /^Les noms ne peuvent pas contenir d'accent/.test(msg) || /n'est pas utilisé dans ce cours/.test(msg)) return "Règle du cours";
     if (/^(IndentationRule|IndentationError)/.test(raw)) return "Erreur d'indentation";
     if (/^SyntaxError/.test(raw)) {
       return /^(Le bloc de|La ligne \d+ se termine par « : »|Indentation inattendue|La ligne \d+ mélange|Il manque une indentation)/.test(msg)
@@ -892,7 +906,9 @@
     if (!type || !msg) return msg;
     var m;
     if ((m = msg.match(ANCIENS_LIBELLES))) return type + (m[2] || "") + " : " + msg.slice(m[0].length);
-    if ((m = msg.match(/^Ligne (\d+) : /))) return type + " (ligne " + m[1] + ") : " + msg.slice(m[0].length);
+    if ((m = msg.match(/^Ligne (\d+) : /))) msg = msg.slice(m[0].length);
+    if (type === "Règle du cours") msg = msg.replace(/^dans ce cours, /i, "");
+    if (m) return type + " (ligne " + m[1] + ") : " + msg;
     return type + " : " + minuscule(msg);
   }
 
