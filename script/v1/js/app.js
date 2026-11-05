@@ -423,7 +423,7 @@
       barre.appendChild(b);
       return b;
     }
-    if (SERIE.grille) boutonGrille(barre);
+    if (SERIE.grille !== false) boutonGrille(barre); // grille: false dans les données pour ne pas l'avoir
     var moins = boutonZoom("−", "Dézoomer", -1);
     var plus = boutonZoom("+", "Zoomer", +1);
     function majBoutons() {
@@ -435,7 +435,7 @@
     boutonDessinPleinEcran(barre);
   }
 
-  /* Bouton grille (seulement si SERIE.grille) : masque ou affiche le quadrillage et les axes. */
+  /* Bouton grille (sauf si SERIE.grille === false) : masque ou affiche le quadrillage et les axes. */
   function boutonGrille(barre) {
     var b = document.createElement("button");
     b.type = "button";
