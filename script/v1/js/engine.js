@@ -196,7 +196,10 @@
     var ctx = { trop: false };
     if (global.TurtleRec) global.TurtleRec.reset(); // la tortue est facultative
     var dup = findIndentProblem(code) || findForbiddenImport(code) || findDuplicateDef(code) || findShadowedName(code);
-    if (dup) return Promise.resolve({ module: null, error: dup, output: "" });
+    if (dup) {
+      dup = { line: dup.line, raw: dup.raw, message: avecType(dup.message, dup.raw) };
+      return Promise.resolve({ module: null, error: dup, output: "" });
+    }
     configure(function (t) { output += t; printed += t; if (onOutput) onOutput(t); }, function () { return output; }, inputs, ctx,
       function (t) { output += t; if (onOutput) onOutput(t); });
     Sk.execStart = Date.now();
@@ -418,7 +421,7 @@
         else if (f > o) problems.push({ line: n, message: "Il y a " + b[3] + " « " + b[1] + " » en trop à la ligne " + n + "." });
       });
       if (blockHeader.test(t) && !/:\s*$/.test(t)) {
-        problems.push({ line: n, message: "Il manque les deux-points « : » à la fin de la ligne " + n + "." });
+        problems.push({ line: n, message: "Erreur de syntaxe (ligne " + n + ") : il manque les deux-points « : » à la fin de la ligne." });
       }
       if (prev && /:\s*$/.test(prev.text) && indent <= prev.indent) {
         var seulementCommentaires = lines.slice(prev.n, n - 1).some(function (l) { return /^\s*#/.test(l); });
@@ -759,8 +762,8 @@
         (/,/.test(m[1]) ? " En Python, les nombres à virgule s'écrivent avec un point : 3.5." : "");
     }
     if ((m = raw.match(/(list|string|tuple) index out of range/))) {
-      return "Position en dehors " + (m[1] === "string" ? "du texte" : "de la liste") + where +
-        " : il n'y a pas d'élément à cette position. Les positions commencent à 0 et vont jusqu'à len(…) - 1.";
+      return "Erreur d'indice" + where + " : cette position est en dehors " + (m[1] === "string" ? "du texte" : "de la liste") +
+        ", il n'y a pas d'élément à cette position. Les positions commencent à 0 et vont jusqu'à len(…) - 1.";
     }
     return null;
   }
@@ -807,7 +810,7 @@
     } else if (/'return' outside function/.test(raw)) {
       msg = "« return » ne peut être utilisé que dans une commande (def)" + where + ".";
     } else if (/RecursionError|Maximum call stack/.test(raw)) {
-      msg = "Trop d'appels imbriqués" + where + " : une commande s'appelle elle-même sans jamais s'arrêter.";
+      msg = "Erreur de récursion" + where + " : trop d'appels imbriqués, une commande s'appelle elle-même sans jamais s'arrêter.";
     } else if (/TimeLimitError/.test(raw)) {
       msg = "Le programme met trop de temps à s'exécuter : y a-t-il une boucle qui ne s'arrête jamais ?";
     } else if (/composantes de la couleur/.test(raw)) {
@@ -843,13 +846,54 @@
       }
     } else {
       // erreur non prévue : le type d'erreur en français, sans le nom anglais
-      var kinds = { TypeError: "Erreur de type", ValueError: "Valeur incorrecte", IndexError: "Position incorrecte",
-        KeyError: "Clé introuvable", AttributeError: "Attribut inconnu", RecursionError: "Trop d'appels imbriqués",
-        OverflowError: "Nombre trop grand", ZeroDivisionError: "Division par zéro" };
+      var kinds = { TypeError: "Erreur de type", ValueError: "Erreur de valeur", IndexError: "Erreur d'indice",
+        KeyError: "Erreur de clé", AttributeError: "Erreur d'attribut", RecursionError: "Erreur de récursion",
+        OverflowError: "Erreur de dépassement", ZeroDivisionError: "Erreur de division par zéro" };
       var kind = (detail.match(/^(\w+Error):\s*/) || [])[1];
       msg = (kinds[kind] || "Erreur") + where + " : " + detail.replace(/^\w+(Error|Exception):\s*/, "");
     }
-    return { message: msg, raw: raw, line: line };
+    return { message: avecType(msg, raw), raw: raw, line: line };
+  }
+
+  /*
+   * Chaque message commence par le type d'erreur : « Erreur de syntaxe : … », « Erreur de type (ligne 3) : … ».
+   * Le type vient de l'erreur Python (raw) ou de la règle du cours qui a trouvé le problème.
+   */
+  function typeErreur(raw, msg) {
+    if (/^TooManyInputs/.test(raw) || /^RuntimeError: Robi /.test(raw)) return null; // vérification, jeu Robi
+    if (/^(IndentationRule|IndentationError)/.test(raw)) return "Erreur d'indentation";
+    if (/^SyntaxError/.test(raw)) {
+      return /^(Le bloc de|La ligne \d+ se termine par « : »|Indentation inattendue|La ligne \d+ mélange|Il manque une indentation)/.test(msg)
+        ? "Erreur d'indentation" : "Erreur de syntaxe";
+    }
+    if (/^(ImportRule|ImportError|ModuleNotFoundError)/.test(raw)) return "Erreur d'import";
+    if (/^DuplicateDefinition/.test(raw)) return "Erreur de définition";
+    if (/^(ShadowRule|NameError|UnboundLocalError)/.test(raw)) return "Erreur de nom";
+    if (/^TypeError/.test(raw)) return "Erreur de type";
+    if (/^ValueError/.test(raw)) return "Erreur de valeur";
+    if (/^ZeroDivisionError/.test(raw)) return "Erreur de division par zéro";
+    if (/^IndexError/.test(raw)) return "Erreur d'indice";
+    if (/^KeyError/.test(raw)) return "Erreur de clé";
+    if (/^AttributeError/.test(raw)) return "Erreur d'attribut";
+    if (/RecursionError|Maximum call stack/.test(raw)) return "Erreur de récursion";
+    if (/TimeLimitError/.test(raw)) return "Temps dépassé";
+    if (/^OverflowError/.test(raw)) return "Erreur de dépassement";
+    if (/^RuntimeError/.test(raw)) return "Erreur d'exécution";
+    return "Erreur";
+  }
+  var ANCIENS_LIBELLES = /^(Division par zéro|Conversion impossible|Clé introuvable|Indentation inattendue|Erreur(?: d[e'][^(:]*?)?)( \(ligne \d+\))? : /;
+  function minuscule(t) {
+    var m = t.match(/^([A-ZÀ-Ý][a-zà-ÿ'’]*)(.?)/);
+    if (!m || m[2] === "(" || /^(Python|Robi|Tab|True|False|None)$/.test(m[1])) return t;
+    return t.charAt(0).toLowerCase() + t.slice(1);
+  }
+  function avecType(msg, raw) {
+    var type = typeErreur(String(raw || ""), msg);
+    if (!type || !msg) return msg;
+    var m;
+    if ((m = msg.match(ANCIENS_LIBELLES))) return type + (m[2] || "") + " : " + msg.slice(m[0].length);
+    if ((m = msg.match(/^Ligne (\d+) : /))) return type + " (ligne " + m[1] + ") : " + msg.slice(m[0].length);
+    return type + " : " + minuscule(msg);
   }
 
   global.PyEngine = { run: run, callFunction: callFunction, getFunction: getFunction, translateError: translateError };
