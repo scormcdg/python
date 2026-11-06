@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Créer une nouvelle série SCORM</title>
+<style>
+@font-face { font-family: "Atkinson Hyperlegible"; src: url("../script/v1/vendor/fonts/atkinson-hyperlegible-latin-400-normal.woff2") format("woff2"); font-weight: 400; font-display: swap; }
+@font-face { font-family: "Atkinson Hyperlegible"; src: url("../script/v1/vendor/fonts/atkinson-hyperlegible-latin-700-normal.woff2") format("woff2"); font-weight: 700; font-display: swap; }
+@font-face { font-family: "JetBrains Mono"; src: url("../script/v1/vendor/fonts/jetbrains-mono-latin-400-normal.woff2") format("woff2"); font-weight: 400; font-display: swap; }
+:root { --fond: #f6f7fb; --papier: #ffffff; --texte: #1e2430; --doux: #5a6478; --bordure: #d9dfea; --accent: #2a4ba0; --code-fond: #f3f5fa; --mono: "JetBrains Mono", ui-monospace, Consolas, monospace; }
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; background: var(--fond); color: var(--texte); font: 17px/1.6 "Atkinson Hyperlegible", system-ui, sans-serif; }
+main { max-width: 860px; margin: 0 auto; padding: 32px 20px 64px; }
+h1 { font-size: 2rem; margin: 0 0 4px; color: var(--accent); }
+.sous-titre { color: var(--doux); margin: 0 0 20px; }
+nav.sommaire { background: var(--papier); border: 1px solid var(--bordure); border-radius: 10px; padding: 12px 18px; margin-bottom: 28px; }
+nav.sommaire ol { margin: 4px 0 0; padding-left: 22px; columns: 2; column-gap: 28px; }
+nav.sommaire a { color: var(--accent); text-decoration: none; }
+nav.sommaire a:hover { text-decoration: underline; }
+h2 { font-size: 1.45rem; margin: 40px 0 10px; padding-top: 6px; border-top: 2px solid var(--bordure); color: var(--accent); }
+h3 { font-size: 1.12rem; margin: 26px 0 8px; }
+code, pre { font-family: var(--mono); font-variant-ligatures: none; font-size: 0.88em; }
+:not(pre) > code { background: var(--code-fond); border: 1px solid #e4e8f1; border-radius: 4px; padding: 0 4px; white-space: nowrap; }
+pre { position: relative; background: var(--code-fond); border: 1px solid var(--bordure); border-radius: 8px; padding: 12px 14px; overflow-x: auto; line-height: 1.5; }
+pre .copier { position: absolute; top: 6px; right: 6px; font: 13px "Atkinson Hyperlegible", sans-serif; background: #fff; border: 1px solid var(--bordure); border-radius: 5px; padding: 2px 8px; cursor: pointer; color: var(--doux); }
+pre .copier:hover { color: var(--accent); border-color: var(--accent); }
+.tableau { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; background: var(--papier); font-size: 0.95rem; margin: 8px 0 14px; }
+th, td { border: 1px solid var(--bordure); padding: 6px 10px; text-align: left; vertical-align: top; }
+th { background: #eef1f8; }
+.pastille { display: inline-block; width: 16px; height: 16px; border-radius: 4px; border: 1px solid rgba(0,0,0,.25); vertical-align: -3px; margin-left: 6px; }
+.nuancier { display: flex; flex-wrap: wrap; gap: 8px; margin: 6px 0 10px; }
+.nuancier span { display: inline-flex; align-items: center; gap: 6px; background: var(--papier); border: 1px solid var(--bordure); border-radius: 6px; padding: 3px 9px 3px 4px; font: 14px var(--mono); }
+.nuancier i { display: inline-block; width: 22px; height: 22px; border-radius: 4px; border: 1px solid rgba(0,0,0,.25); }
+footer { margin-top: 48px; color: var(--doux); font-size: 0.9rem; }
+@media (max-width: 600px) { nav.sommaire ol { columns: 1; } body { font-size: 16px; } :not(pre) > code { white-space: normal; overflow-wrap: anywhere; } }
+@media print { pre .copier, nav.sommaire { display: none; } body { background: #fff; } }
+</style>
+</head>
+<body>
+<main>
+<h1>Créer une nouvelle série SCORM</h1>
+<p class="sous-titre">Faire une nouvelle série d'exercices Python à partir d'un zip de série existant, sans rien changer sur GitHub.</p>
+<nav class="sommaire"><strong>Sommaire</strong><ol><li><a href="#le-principe">Le principe</a></li><li><a href="#etapes">Étapes</a></li><li><a href="#le-fichier-dexercices">Le fichier d'exercices</a></li><li><a href="#les-verifications">Les vérifications</a></li><li><a href="#pieges-frequents">Pièges fréquents</a></li></ol></nav>
+<h2 id="le-principe">Le principe</h2>
+<p>Un zip de série ne contient que 4 fichiers. Tout le reste (moteur Python, tortue, éditeur, vérification, styles) est chargé depuis GitHub, à l'adresse <code>https://scormcdg.github.io/python/script/v1/</code>.</p>
+<table>
+<thead>
+<tr>
+<th>Fichier</th>
+<th>Rôle</th>
+<th>À changer pour une nouvelle série ?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>data/serieXX.js</code></td>
+<td>les exercices : énoncés, code de départ, solutions, vérifications</td>
+<td>oui, c'est l'essentiel du travail</td>
+</tr>
+<tr>
+<td><code>index.html</code></td>
+<td>la page ; elle indique le titre et le nom du fichier d'exercices</td>
+<td>oui : le titre (2 fois) et le nom du fichier</td>
+</tr>
+<tr>
+<td><code>imsmanifest.xml</code></td>
+<td>la fiche SCORM lue par Moodle</td>
+<td>oui : les identifiants, le titre et le nom du fichier</td>
+</tr>
+<tr>
+<td><code>charger.js</code></td>
+<td>charge les fichiers communs depuis GitHub</td>
+<td>non</td>
+</tr>
+</tbody>
+</table>
+<p>Comme les fichiers communs sont sur GitHub, une correction faite sur GitHub s'applique à toutes les séries déjà dans Moodle. En contrepartie, il faut Internet pour que la série s'affiche.</p>
+<h2 id="etapes">Étapes</h2>
+<p>L'exemple fait une série 06 à partir de la série 05.</p>
+<ol>
+<li><strong>Copier une série existante.</strong> Décompressez <code>serie05-scorm-leger.zip</code> dans un nouveau dossier, par exemple <code>serie06/</code>. Prenez de préférence une série proche de celle que vous voulez faire : ses exercices serviront de modèles.</li>
+<li><strong>Renommer le fichier d'exercices.</strong> <code>data/serie05.js</code> devient <code>data/serie06.js</code>.</li>
+<li>
+<p><strong>Modifier <code>index.html</code>.</strong> Changez le titre dans <code>&lt;title&gt;</code> et dans <code>&lt;h1&gt;</code>, puis le nom du fichier d'exercices :</p>
+<div class="highlight"><pre><span></span><code>var EXERCICES = "data/serie06.js";
+</code></pre></div>
+<p>Le lien « Tutoriel tortue » peut rester ou être supprimé (les 2 lignes <code>&lt;a href=…&gt;</code>).</p>
+</li>
+<li>
+<p><strong>Modifier <code>imsmanifest.xml</code>.</strong> Remplacez <code>serie05_print_input</code> par un nom propre à la nouvelle série (par exemple <code>serie06_listes</code>) partout où il apparaît, et <code>res_serie05</code> par <code>res_serie06</code>. Changez les deux <code>&lt;title&gt;</code> et la ligne <code>&lt;file href="data/serie06.js"/&gt;</code>.</p>
+</li>
+<li><strong>Écrire les exercices</strong> dans <code>data/serie06.js</code> : changez d'abord <code>id</code> (par exemple <code>"serie06"</code>) et <code>titre</code> en haut du fichier, puis les exercices (voir la partie suivante).</li>
+<li><strong>Tester</strong> en ouvrant <code>index.html</code> dans Firefox ou Chrome (double-clic). La page affiche « Mode test » : le travail est gardé dans le navigateur. Pour chaque exercice, collez la solution et cliquez sur Vérifier : tout doit être vert. Essayez aussi une ou deux mauvaises réponses.</li>
+<li>
+<p><strong>Zipper le contenu du dossier</strong>, pas le dossier lui-même : <code>imsmanifest.xml</code> doit être à la racine du zip. Sur Linux, depuis le dossier <code>serie06/</code> :</p>
+<div class="highlight"><pre><span></span><code>zip<span class="w"> </span>-r<span class="w"> </span>../serie06-scorm-leger.zip<span class="w"> </span>.
+</code></pre></div>
+</li>
+<li>
+<p><strong>Mettre dans Moodle</strong> : Ajouter une activité → Paquetage SCORM → déposer le zip. Pour corriger une série déjà en place, modifiez l'activité et remplacez le paquetage : les tentatives déjà faites restent normalement enregistrées (évitez de changer les identifiants des exercices en cours d'année).</p>
+</li>
+</ol>
+<p>Si un élève ou vous-même ne voyez pas une correction faite sur GitHub, le navigateur a gardé l'ancienne version : Ctrl+F5.</p>
+<h2 id="le-fichier-dexercices">Le fichier d'exercices</h2>
+<p>Le fichier <code>data/serieXX.js</code> décrit la série dans un objet <code>SERIE</code> : un <code>id</code> (unique pour chaque série), un <code>titre</code> (affiché en haut de la page) et la liste <code>exercices</code>, dans l'ordre des onglets.</p>
+<table>
+<thead>
+<tr>
+<th>Champ</th>
+<th>Contenu</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>id</code></td>
+<td>identifiant court et unique dans la série : <code>"exemple"</code>, <code>"ex1"</code>, <code>"ex2"</code>… Ne plus le changer une fois la série utilisée</td>
+</tr>
+<tr>
+<td><code>titre</code></td>
+<td>nom de l'onglet : <code>"Exemple"</code>, <code>"Exercice 1"</code>…</td>
+</tr>
+<tr>
+<td><code>note</code></td>
+<td><code>true</code> : exercice noté, avec le bouton Vérifier. <code>false</code> : pas de vérification (pour un exemple)</td>
+</tr>
+<tr>
+<td><code>figure</code></td>
+<td><code>true</code> : affiche la « Figure attendue », dessinée avec la première solution</td>
+</tr>
+<tr>
+<td><code>enonce</code></td>
+<td>le texte de l'énoncé, en HTML : <code>&lt;p&gt;</code>, <code>&lt;strong&gt;</code>, <code>&lt;code&gt;</code>, <code>&lt;ol&gt;&lt;li&gt;</code>…</td>
+</tr>
+<tr>
+<td><code>code</code></td>
+<td>le code de départ dans l'éditeur ; les retours à la ligne s'écrivent <code>\n</code></td>
+</tr>
+<tr>
+<td><code>solutions</code></td>
+<td>une ou plusieurs solutions justes ; le dessin de l'élève est comparé à celui des solutions</td>
+</tr>
+<tr>
+<td><code>checks</code></td>
+<td>la liste des vérifications, affichées comme critères (partie suivante)</td>
+</tr>
+<tr>
+<td><code>inputs</code></td>
+<td>facultatif : les réponses données à <code>input()</code> pendant la vérification, par exemple <code>["5", "100"]</code></td>
+</tr>
+</tbody>
+</table>
+<p>En haut du fichier, deux aides servent dans les énoncés. <code>CODE("…")</code> affiche un bout de code sur ses propres lignes, et <code>OPTS</code> accepte un dessin tourné ou retourné comme celui de la solution.</p>
+<p>Exemple complet d'un exercice noté, à copier puis adapter :</p>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nx">id</span><span class="o">:</span><span class="w"> </span><span class="s2">"ex1"</span><span class="p">,</span>
+<span class="w">  </span><span class="nx">titre</span><span class="o">:</span><span class="w"> </span><span class="s2">"Exercice 1"</span><span class="p">,</span>
+<span class="w">  </span><span class="nx">note</span><span class="o">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<span class="w">  </span><span class="nx">figure</span><span class="o">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<span class="w">  </span><span class="nx">enonce</span><span class="o">:</span>
+<span class="w">    </span><span class="s2">"&lt;p&gt;Écrivez une commande &lt;code&gt;carre(cote)&lt;/code&gt; qui dessine un carré, "</span><span class="w"> </span><span class="o">+</span>
+<span class="w">    </span><span class="s2">"puis dessinez un carré de côté 100.&lt;/p&gt;"</span><span class="w"> </span><span class="o">+</span>
+<span class="w">    </span><span class="nx">CODE</span><span class="p">(</span><span class="s2">"carre(100)"</span><span class="p">),</span>
+<span class="w">  </span><span class="nx">code</span><span class="o">:</span><span class="w"> </span><span class="s2">"from turtle import *\n\n\n\ndone()\n"</span><span class="p">,</span>
+<span class="w">  </span><span class="nx">solutions</span><span class="o">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">    </span><span class="s2">"from turtle import *\n\ndef carre(cote):\n    for i in range(4):\n        forward(cote)\n        left(90)\n\ncarre(100)\n"</span>
+<span class="w">  </span><span class="p">],</span>
+<span class="w">  </span><span class="nx">checks</span><span class="o">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="nx">id</span><span class="o">:</span><span class="w"> </span><span class="s2">"def"</span><span class="p">,</span><span class="w"> </span><span class="nx">kind</span><span class="o">:</span><span class="w"> </span><span class="s2">"params"</span><span class="p">,</span><span class="w"> </span><span class="nx">name</span><span class="o">:</span><span class="w"> </span><span class="s2">"carre"</span><span class="p">,</span><span class="w"> </span><span class="nx">count</span><span class="o">:</span><span class="w"> </span><span class="mf">1</span><span class="p">,</span><span class="w"> </span><span class="nx">example</span><span class="o">:</span><span class="w"> </span><span class="s2">"def carre(cote):"</span><span class="p">,</span>
+<span class="w">      </span><span class="nx">label</span><span class="o">:</span><span class="w"> </span><span class="s2">"La commande carre(cote) existe"</span><span class="w"> </span><span class="p">},</span>
+<span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="nx">id</span><span class="o">:</span><span class="w"> </span><span class="s2">"for"</span><span class="p">,</span><span class="w"> </span><span class="nx">kind</span><span class="o">:</span><span class="w"> </span><span class="s2">"source"</span><span class="p">,</span><span class="w"> </span><span class="nx">re</span><span class="o">:</span><span class="w"> </span><span class="s2">"\\bfor\\b"</span><span class="p">,</span>
+<span class="w">      </span><span class="nx">label</span><span class="o">:</span><span class="w"> </span><span class="s2">"Le programme utilise une boucle for"</span><span class="p">,</span>
+<span class="w">      </span><span class="nx">fail</span><span class="o">:</span><span class="w"> </span><span class="s2">"Utilisez une boucle for pour répéter les 4 côtés."</span><span class="w"> </span><span class="p">},</span>
+<span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="nx">id</span><span class="o">:</span><span class="w"> </span><span class="s2">"carre50"</span><span class="p">,</span><span class="w"> </span><span class="nx">kind</span><span class="o">:</span><span class="w"> </span><span class="s2">"shape"</span><span class="p">,</span><span class="w"> </span><span class="nx">target</span><span class="o">:</span><span class="w"> </span><span class="s2">"carre"</span><span class="p">,</span><span class="w"> </span><span class="nx">args</span><span class="o">:</span><span class="w"> </span><span class="p">[</span><span class="mf">50</span><span class="p">],</span><span class="w"> </span><span class="nx">opts</span><span class="o">:</span><span class="w"> </span><span class="nx">OPTS</span><span class="p">,</span>
+<span class="w">      </span><span class="nx">label</span><span class="o">:</span><span class="w"> </span><span class="s2">"carre(50) dessine un carré de côté 50"</span><span class="w"> </span><span class="p">},</span>
+<span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="nx">id</span><span class="o">:</span><span class="w"> </span><span class="s2">"dessin"</span><span class="p">,</span><span class="w"> </span><span class="nx">kind</span><span class="o">:</span><span class="w"> </span><span class="s2">"shape"</span><span class="p">,</span><span class="w"> </span><span class="nx">target</span><span class="o">:</span><span class="w"> </span><span class="s2">"&lt;program&gt;"</span><span class="p">,</span><span class="w"> </span><span class="nx">opts</span><span class="o">:</span><span class="w"> </span><span class="nx">OPTS</span><span class="p">,</span>
+<span class="w">      </span><span class="nx">label</span><span class="o">:</span><span class="w"> </span><span class="s2">"Le programme dessine un carré de côté 100"</span><span class="w"> </span><span class="p">}</span>
+<span class="w">  </span><span class="p">]</span>
+<span class="p">},</span>
+</code></pre></div>
+<p>Chaque exercice est entre <code>{ }</code>, séparé du suivant par une virgule. Le plus simple est de copier un exercice existant de la série de départ et de le modifier.</p>
+<h2 id="les-verifications">Les vérifications</h2>
+<p>Chaque vérification de <code>checks</code> devient un critère dans la liste « Vérification » : son <code>label</code> est affiché en vert ou en rouge, et son message d'échec (<code>fail</code> ou message automatique) apparaît en dessous. Chaque vérification a un <code>id</code> unique dans l'exercice et un <code>kind</code> :</p>
+<table>
+<thead>
+<tr>
+<th><code>kind</code></th>
+<th>Ce qui est vérifié</th>
+<th>Champs</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>"shape"</code></td>
+<td>le dessin, comparé à celui des solutions</td>
+<td><code>target</code> : <code>"&lt;program&gt;"</code> (tout le programme) ou le nom d'une commande ; <code>args</code> : les valeurs de l'appel, par exemple <code>[50]</code> ; <code>opts</code> ; <code>hint</code> (facultatif) ; <code>inputs</code> (facultatif)</td>
+</tr>
+<tr>
+<td><code>"params"</code></td>
+<td>la commande est définie avec le bon nombre de paramètres</td>
+<td><code>name</code>, <code>count</code>, <code>example</code> (par exemple <code>"def carre(cote):"</code>)</td>
+</tr>
+<tr>
+<td><code>"defined"</code></td>
+<td>la commande est définie</td>
+<td><code>name</code>, <code>fail</code> (facultatif)</td>
+</tr>
+<tr>
+<td><code>"calls"</code></td>
+<td>une commande en appelle une autre</td>
+<td><code>caller</code> : nom d'une commande, <code>"&lt;main&gt;"</code> (programme principal) ou <code>"&lt;any&gt;"</code> (n'importe où) ; <code>callee</code> : la commande appelée ; <code>fail</code></td>
+</tr>
+<tr>
+<td><code>"source"</code></td>
+<td>le code contient un mot ou une forme, sans compter commentaires et textes</td>
+<td><code>re</code> : expression régulière ; <code>in</code> (facultatif) : seulement dans cette commande ; <code>fail</code></td>
+</tr>
+<tr>
+<td><code>"output"</code></td>
+<td>ce qu'affiche <code>print()</code></td>
+<td><code>re</code> ; <code>inputs</code> ; ou <code>cases</code> : <code>[{ inputs, re, attendu }, …]</code> pour tester plusieurs jeux de réponses ; <code>fail</code></td>
+</tr>
+<tr>
+<td><code>"colors"</code></td>
+<td>les couleurs du trait et du remplissage, comparées à la solution</td>
+<td><code>inputs</code> (facultatif) ; <code>fail</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="les-options-du-dessin-opts">Les options du dessin (<code>opts</code>)</h3>
+<ul>
+<li><code>rotate: true</code> : le dessin peut être tourné.</li>
+<li><code>mirror: true</code> : le dessin peut être retourné (symétrique).</li>
+<li><code>scale: true</code> : la taille n'est pas vérifiée.</li>
+<li><code>color: true</code> : les couleurs des traits sont vérifiées.</li>
+</ul>
+<p><code>OPTS</code>, défini en haut du fichier, vaut <code>{ rotate: true, mirror: true }</code> : c'est le choix habituel.</p>
+<h3 id="les-indices-dun-dessin-hint">Les indices d'un dessin (<code>hint</code>)</h3>
+<p>Un texte s'ajoute au message quand le dessin ne correspond pas : <code>hint: "Un carré a 4 côtés."</code>. Pour un indice selon le problème : <code>hint: { count: "…", size: "…", shape: "…" }</code>. <code>count</code> sert s'il manque des traits ou s'il y en a trop, <code>size</code> si le dessin est trop grand ou trop petit, et <code>shape</code> si la forme est différente.</p>
+<h3 id="exemples">Exemples</h3>
+<div class="highlight"><pre><span></span><code><span class="c1">// le code contient une boucle while</span>
+<span class="p">{</span><span class="w"> </span><span class="nx">id</span><span class="o">:</span><span class="w"> </span><span class="s2">"while"</span><span class="p">,</span><span class="w"> </span><span class="nx">kind</span><span class="o">:</span><span class="w"> </span><span class="s2">"source"</span><span class="p">,</span><span class="w"> </span><span class="nx">re</span><span class="o">:</span><span class="w"> </span><span class="s2">"\\bwhile\\b"</span><span class="p">,</span><span class="w"> </span><span class="nx">label</span><span class="o">:</span><span class="w"> </span><span class="s2">"Le programme utilise while"</span><span class="p">,</span><span class="w"> </span><span class="nx">fail</span><span class="o">:</span><span class="w"> </span><span class="s2">"Utilisez une boucle while."</span><span class="w"> </span><span class="p">}</span>
+
+<span class="c1">// spirale(10, 50) dessine la bonne figure</span>
+<span class="p">{</span><span class="w"> </span><span class="nx">id</span><span class="o">:</span><span class="w"> </span><span class="s2">"s1"</span><span class="p">,</span><span class="w"> </span><span class="nx">kind</span><span class="o">:</span><span class="w"> </span><span class="s2">"shape"</span><span class="p">,</span><span class="w"> </span><span class="nx">target</span><span class="o">:</span><span class="w"> </span><span class="s2">"spirale"</span><span class="p">,</span><span class="w"> </span><span class="nx">args</span><span class="o">:</span><span class="w"> </span><span class="p">[</span><span class="mf">10</span><span class="p">,</span><span class="w"> </span><span class="mf">50</span><span class="p">],</span><span class="w"> </span><span class="nx">opts</span><span class="o">:</span><span class="w"> </span><span class="nx">OPTS</span><span class="p">,</span><span class="w"> </span><span class="nx">label</span><span class="o">:</span><span class="w"> </span><span class="s2">"spirale(10, 50) est juste"</span><span class="w"> </span><span class="p">}</span>
+
+<span class="c1">// le programme principal appelle carre()</span>
+<span class="p">{</span><span class="w"> </span><span class="nx">id</span><span class="o">:</span><span class="w"> </span><span class="s2">"appel"</span><span class="p">,</span><span class="w"> </span><span class="nx">kind</span><span class="o">:</span><span class="w"> </span><span class="s2">"calls"</span><span class="p">,</span><span class="w"> </span><span class="nx">caller</span><span class="o">:</span><span class="w"> </span><span class="s2">"&lt;main&gt;"</span><span class="p">,</span><span class="w"> </span><span class="nx">callee</span><span class="o">:</span><span class="w"> </span><span class="s2">"carre"</span><span class="p">,</span><span class="w"> </span><span class="nx">label</span><span class="o">:</span><span class="w"> </span><span class="s2">"Le programme appelle carre()"</span><span class="p">,</span><span class="w"> </span><span class="nx">fail</span><span class="o">:</span><span class="w"> </span><span class="s2">"Appelez votre commande, par exemple carre(100)."</span><span class="w"> </span><span class="p">}</span>
+
+<span class="c1">// avec input() : le dessin est testé avec d'autres réponses</span>
+<span class="p">{</span><span class="w"> </span><span class="nx">id</span><span class="o">:</span><span class="w"> </span><span class="s2">"d8"</span><span class="p">,</span><span class="w"> </span><span class="nx">kind</span><span class="o">:</span><span class="w"> </span><span class="s2">"shape"</span><span class="p">,</span><span class="w"> </span><span class="nx">target</span><span class="o">:</span><span class="w"> </span><span class="s2">"&lt;program&gt;"</span><span class="p">,</span><span class="w"> </span><span class="nx">inputs</span><span class="o">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"8"</span><span class="p">,</span><span class="w"> </span><span class="s2">"60"</span><span class="p">],</span><span class="w"> </span><span class="nx">opts</span><span class="o">:</span><span class="w"> </span><span class="nx">OPTS</span><span class="p">,</span><span class="w"> </span><span class="nx">label</span><span class="o">:</span><span class="w"> </span><span class="s2">"Avec 8 et 60, un octogone de côté 60"</span><span class="w"> </span><span class="p">}</span>
+
+<span class="c1">// l'affichage, testé avec deux jeux de réponses</span>
+<span class="p">{</span><span class="w"> </span><span class="nx">id</span><span class="o">:</span><span class="w"> </span><span class="s2">"msg"</span><span class="p">,</span><span class="w"> </span><span class="nx">kind</span><span class="o">:</span><span class="w"> </span><span class="s2">"output"</span><span class="p">,</span>
+<span class="w">  </span><span class="nx">cases</span><span class="o">:</span><span class="w"> </span><span class="p">[{</span><span class="w"> </span><span class="nx">inputs</span><span class="o">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"5"</span><span class="p">,</span><span class="w"> </span><span class="s2">"100"</span><span class="p">],</span><span class="w"> </span><span class="nx">re</span><span class="o">:</span><span class="w"> </span><span class="s2">"L'angle vaut : 72"</span><span class="p">,</span><span class="w"> </span><span class="nx">attendu</span><span class="o">:</span><span class="w"> </span><span class="s2">"L'angle vaut : 72.0"</span><span class="w"> </span><span class="p">},</span>
+<span class="w">          </span><span class="p">{</span><span class="w"> </span><span class="nx">inputs</span><span class="o">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"8"</span><span class="p">,</span><span class="w"> </span><span class="s2">"60"</span><span class="p">],</span><span class="w"> </span><span class="nx">re</span><span class="o">:</span><span class="w"> </span><span class="s2">"L'angle vaut : 45"</span><span class="p">,</span><span class="w"> </span><span class="nx">attendu</span><span class="o">:</span><span class="w"> </span><span class="s2">"L'angle vaut : 45.0"</span><span class="w"> </span><span class="p">}],</span>
+<span class="w">  </span><span class="nx">label</span><span class="o">:</span><span class="w"> </span><span class="s2">"Le programme affiche l'angle"</span><span class="p">,</span><span class="w"> </span><span class="nx">fail</span><span class="o">:</span><span class="w"> </span><span class="s2">"Utilisez print() avec l'angle calculé."</span><span class="w"> </span><span class="p">}</span>
+</code></pre></div>
+<p>Les vérifications sont faites dans l'ordre de la liste. Mettez d'abord les plus simples (la commande existe, la boucle est là), puis les dessins.</p>
+<h2 id="pieges-frequents">Pièges fréquents</h2>
+<table>
+<thead>
+<tr>
+<th>Symptôme</th>
+<th>Cause</th>
+<th>Correction</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Les exercices n'apparaissent pas (page vide, sans onglets)</td>
+<td>une erreur de syntaxe JavaScript dans <code>data/serieXX.js</code> : virgule oubliée entre deux exercices, guillemet non fermé, <code>{</code> ou <code>[</code> en trop</td>
+<td>ouvrez la console du navigateur (F12, onglet Console) : elle indique la ligne fautive</td>
+</tr>
+<tr>
+<td>Le texte s'arrête au milieu d'un énoncé</td>
+<td>un <code>"</code> dans un texte entre <code>"…"</code></td>
+<td>écrivez <code>\"</code>, par exemple <code>"&lt;code&gt;print(\"Bonjour\")&lt;/code&gt;"</code>, ou utilisez <code>'</code> pour l'apostrophe</td>
+</tr>
+<tr>
+<td>Le code de départ tient sur une seule ligne</td>
+<td>les retours à la ligne manquent</td>
+<td>écrivez <code>\n</code> à chaque fin de ligne, et 4 espaces pour l'indentation</td>
+</tr>
+<tr>
+<td>Une règle <code>source</code> ne trouve jamais le mot</td>
+<td>dans <code>re</code>, la barre oblique s'écrit en double</td>
+<td><code>"\\bfor\\b"</code> pour le mot for, <code>"\\("</code> pour une parenthèse</td>
+</tr>
+<tr>
+<td>Vérifier affiche « Solution de référence invalide »</td>
+<td>la solution elle-même plante, ou elle pose plus de questions <code>input()</code> que de réponses dans <code>inputs</code></td>
+<td>exécutez la solution dans l'exercice et corrigez-la</td>
+</tr>
+<tr>
+<td>La bonne réponse est refusée</td>
+<td>une vérification ne correspond pas à la solution (mauvaises valeurs dans <code>args</code>, texte différent dans <code>re</code>)</td>
+<td>collez la solution et cliquez sur Vérifier : tous les critères doivent être verts</td>
+</tr>
+<tr>
+<td>Deux séries partagent le même travail en mode test</td>
+<td>même <code>id</code> en haut des deux fichiers d'exercices</td>
+<td>donnez à chaque série un <code>id</code> unique</td>
+</tr>
+<tr>
+<td>Moodle refuse le zip</td>
+<td>le zip contient le dossier au lieu de son contenu</td>
+<td><code>imsmanifest.xml</code> doit être à la racine : zippez depuis l'intérieur du dossier</td>
+</tr>
+</tbody>
+</table>
+<p>Le message « L'exercice n'a pas pu se charger : le site qui contient les fichiers de l'exercice ne répond pas » veut dire autre chose : GitHub ne répond pas, ou le nom du fichier d'exercices dans <code>index.html</code> ne correspond pas au fichier du dossier <code>data</code>.</p>
+<p>Avant de mettre la série dans Moodle, faites ce contrôle pour chaque exercice :</p>
+<ul>
+<li>la solution collée dans l'éditeur donne tous les critères en vert ;</li>
+<li>une réponse fausse typique (valeur écrite en dur, boucle oubliée) est refusée avec un message compréhensible ;</li>
+<li>aucun message d'échec ne donne la solution toute faite.</li>
+</ul>
+</main>
+<script>
+document.querySelectorAll("table").forEach(function (t) { var d = document.createElement("div"); d.className = "tableau"; t.parentNode.insertBefore(d, t); d.appendChild(t); });
+document.querySelectorAll("pre").forEach(function (pre) {
+  var b = document.createElement("button"); b.className = "copier"; b.type = "button"; b.textContent = "Copier";
+  b.onclick = function () {
+    var texte = pre.querySelector("code").innerText;
+    var ok = function () { b.textContent = "Copié !"; setTimeout(function () { b.textContent = "Copier"; }, 1500); };
+    if (navigator.clipboard) navigator.clipboard.writeText(texte).then(ok, function () {});
+  };
+  pre.appendChild(b);
+});
+</script>
+</body>
+</html>
