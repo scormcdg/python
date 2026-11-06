@@ -458,7 +458,9 @@
                     if (p.run.error) {
                       echec = "Le programme provoque une erreur" + reponsesTexte(inO) + " : " + p.run.error.message;
                     } else if (!new RegExp(k.re, c.flags || "").test(p.printed != null ? p.printed : p.output)) {
-                      echec = (c.cases ? "Avec les réponses " + (inO || []).join(", ") + ", l'affichage n'est pas le bon. " : "") + (c.fail || "");
+                      // k.attendu (facultatif) : ce que le programme doit afficher avec ces réponses
+                      echec = (c.cases ? "Avec les réponses " + (inO || []).join(", ") + ", l'affichage n'est pas le bon" +
+                        (k.attendu ? " : le programme doit afficher « " + k.attendu + " »." : ".") + " " : "") + (c.fail || "");
                     }
                   });
                 });
