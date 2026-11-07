@@ -4,8 +4,8 @@
  *   PyEngine.run(code, onOutput, options), callFunction(module, nom, args), getFunction(module, nom), translateError(err, code)
  * Python tourne dans un worker (js/worker.js, py/moteur.py) : la page reste utilisable, et un programme
  * qui dure plus de 5 secondes est arrêté. input() met le programme en pause (JSPI) pendant que l'élève répond.
- * Dépend de : turtle.js (facultatif) ; Pyodide 0.29.5 est dans vendor/pyodide/, à côté de ce dossier js/
- * (une autre adresse peut être donnée avec var PYODIDE_URL = "…/" dans index.html).
+ * Dépend de : turtle.js (facultatif) ; Pyodide 0.29.5 vient de jsDelivr, ou de la copie dans vendor/pyodide/
+ * si jsDelivr ne répond pas (voir PYODIDE_URLS).
  */
 (function (global) {
   "use strict";
@@ -23,8 +23,13 @@
     }
     return src.replace(/js\/engine\.js(?:[?#].*)?$/, "");
   })();
-  /* Pyodide : copie sur GitHub, avec les fichiers communs (vendor/pyodide/) */
-  var PYODIDE_URL = global.PYODIDE_URL || BASE + "vendor/pyodide/";
+  /*
+   * Pyodide 0.29.5 : d'abord jsDelivr (adresse officielle de Pyodide), puis, s'il ne répond pas en quelques secondes,
+   * la copie sur GitHub, avec les fichiers communs (vendor/pyodide/). Les deux copies sont identiques.
+   * var PYODIDE_URL = "…/" dans index.html remplace cette liste (une seule adresse).
+   */
+  var PYODIDE_URLS = global.PYODIDE_URL ? [global.PYODIDE_URL]
+    : ["https://cdn.jsdelivr.net/pyodide/v0.29.5/full/", BASE + "vendor/pyodide/"];
 
   /*
    * input() : la question s'affiche dans la console, et l'élève tape sa réponse
@@ -80,6 +85,7 @@
         var m = ev.data;
         if (m.type === "pret") { estPret = true; resolve(); return; }
         if (m.type === "echec") { reject(new Error(m.texte)); return; }
+        if (m.type === "source") { if (global.console) global.console.info("Python (Pyodide) chargé depuis " + m.url); return; }
         if (ecouteur) ecouteur(m);
       };
       worker.onerror = function (e) {
@@ -88,7 +94,7 @@
       };
     });
     pret.catch(function () { echec = true; });
-    worker.postMessage({ type: "init", base: BASE, pyodide: PYODIDE_URL, tortue: !!global.TURTLE_MODULE_SRC });
+    worker.postMessage({ type: "init", base: BASE, pyodide: PYODIDE_URLS, tortue: !!global.TURTLE_MODULE_SRC });
   }
 
   /* Pendant le premier chargement : un message dans la console, retiré quand Python est prêt */

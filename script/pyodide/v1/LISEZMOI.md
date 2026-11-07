@@ -4,8 +4,9 @@ Chargés par les paquets SCORM depuis `https://scormcdg.github.io/python/script/
 Les anciennes séries (Skulpt) utilisent toujours `script/v1/` et ne changent pas.
 
 La page est exactement la même que celle de `script/v1/` : seul le moteur Python change.
-Python est Pyodide 0.29.5 (le vrai Python 3.13). Une copie est dans `vendor/pyodide/`
-(fichiers officiels du paquet npm `pyodide@0.29.5`, licence MPL-2.0) : tout vient de GitHub, sans autre site.
+Python est Pyodide 0.29.5 (le vrai Python 3.13). Il est chargé d'abord depuis jsDelivr (adresse officielle
+de Pyodide) ; si jsDelivr ne répond pas en 6 secondes, depuis la copie de `vendor/pyodide/` (fichiers officiels
+du paquet npm `pyodide@0.29.5`, licence MPL-2.0).
 Environ 12 Mo la première fois, gardés ensuite par le navigateur. Python tourne dans un « worker », à part de la page.
 
 - `js/canvas.js`, `js/checker.js`, `js/couleurs.js`, `js/scorm.js`, `vendor/codemirror/`, `vendor/fonts/` :

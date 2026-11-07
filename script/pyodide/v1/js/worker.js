@@ -4,9 +4,9 @@
  * Ce fichier est chargé par engine.js (importScripts depuis un petit worker « blob »,
  * ce qui marche aussi quand les fichiers communs sont sur GitHub et le paquet dans Moodle).
  *
- * Messages reçus : { type: "init", base, pyodide, tortue }, { type: "job", job } (job : voir py/moteur.py),
+ * Messages reçus : { type: "init", base, pyodide (liste d'adresses, essayées dans l'ordre), tortue }, { type: "job", job } (job : voir py/moteur.py),
  *                  { type: "reponse", texte } (réponse à input())
- * Messages envoyés : { type: "pret" }, { type: "echec", texte }, { type: "out", texte, echo },
+ * Messages envoyés : { type: "pret" }, { type: "source", url } (adresse d'où Pyodide a été chargé), { type: "echec", texte }, { type: "out", texte, echo },
  *                    { type: "input", invite }, { type: "fin", resultat }
  */
 /* global loadPyodide */
@@ -53,11 +53,42 @@ function texteDe(url) {
   });
 }
 
+/*
+ * Pyodide : on essaie les adresses dans l'ordre (jsDelivr, puis la copie sur GitHub).
+ * Une adresse qui ne répond pas en DELAI_SONDE ms, ou dont le chargement échoue, est abandonnée pour la suivante.
+ */
+var DELAI_SONDE = 6000;
+function sonder(url) {
+  var ac = typeof AbortController === "function" ? new AbortController() : null;
+  var minuterie = setTimeout(function () { if (ac) ac.abort(); }, DELAI_SONDE);
+  return Promise.race([
+    fetch(url + "pyodide.js", ac ? { signal: ac.signal } : {}),
+    new Promise(function (_, refuser) { setTimeout(function () { refuser(new Error("pas de réponse")); }, DELAI_SONDE + 100); })
+  ]).then(function (r) {
+    clearTimeout(minuterie);
+    if (!r.ok) throw new Error("erreur " + r.status);
+  }, function (e) { clearTimeout(minuterie); throw e; });
+}
+function chargerPyodide(urls, i, erreurs) {
+  var url = urls[i];
+  return sonder(url).then(function () {
+    if (typeof loadPyodide !== "function") importScripts(url + "pyodide.js");
+    return loadPyodide({ indexURL: url });
+  }).then(function (py) {
+    self.postMessage({ type: "source", url: url });
+    return py;
+  }, function (e) {
+    erreurs.push(url + " : " + String((e && e.message) || e));
+    if (i + 1 < urls.length) return chargerPyodide(urls, i + 1, erreurs);
+    throw new Error(erreurs.join(" ; "));
+  });
+}
+
 function demarrer(m) {
   importScripts(m.base + "js/couleurs.js");
-  importScripts(m.pyodide + "pyodide.js");
+  var urls = [].concat(m.pyodide);
   return Promise.all([
-    loadPyodide({ indexURL: m.pyodide }),
+    chargerPyodide(urls, 0, []),
     texteDe(m.base + "py/moteur.py"),
     texteDe(m.base + "py/turtle.py")
   ]).then(function (r) {
