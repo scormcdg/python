@@ -163,6 +163,16 @@
     var raw = type + ": " + msg + (e.ligne ? " on line " + e.ligne : "");
     return { toString: function () { return raw; }, traceback: e.ligne ? [{ lineno: e.ligne }] : [] };
   }
+  /* Message du vrai Python, tel qu'il l'écrit (affiché sous le message en français, à la demande) */
+  function messageOriginal(e) {
+    return (e.ligne ? 'File "<programme>", line ' + e.ligne + "\n" : "") + e.type + (e.msg ? ": " + e.msg : "");
+  }
+  function avecOriginal(err, e) {
+    // pas pour les erreurs de notre tortue : leur message est déjà en français
+    var francais = /attend (un|deux) nombres?|Couleur invalide|entre les parenthèses|composantes de la couleur|La tortue a fait/.test(e.msg || "");
+    if (e.type !== "Interne" && e.type !== "InputIndisponible" && !francais) err.original = messageOriginal(e);
+    return err;
+  }
   function erreurSpeciale(r, code) {
     if (r.chargement) {
       return { line: null, raw: "LoadError: " + r.chargement,
@@ -315,7 +325,7 @@
           message: "Le programme pose trop de questions avec input() : il doit en poser " + n + " (" +
             (n > 1 ? "une pour chaque réponse demandée dans l'énoncé" : "une seule") + ")." } };
       }
-      if (r.erreur) return { module: null, error: translateError(erreurPython(r.erreur), code), output: output };
+      if (r.erreur) return { module: null, error: avecOriginal(translateError(erreurPython(r.erreur), code), r.erreur), output: output };
       return { module: { id: id, fonctions: r.fonctions || [] }, error: null, output: output, printed: printed };
     });
   }
@@ -337,7 +347,7 @@
       if (sp) return { error: sp };
       if (global.TurtleRec) global.TurtleRec.charger(r.tortue);
       if (r.trop) return { error: { line: null, raw: "TooManyInputs", message: "Le programme pose trop de questions avec input()." } };
-      if (r.erreur) return { error: translateError(erreurPython(r.erreur)) };
+      if (r.erreur) return { error: avecOriginal(translateError(erreurPython(r.erreur)), r.erreur) };
       return { error: null };
     });
   }
