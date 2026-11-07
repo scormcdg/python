@@ -208,18 +208,6 @@
     var c = $("console");
     c.className = "console erreur";
     c.textContent = err.message;
-    // message du vrai Python (version Pyodide), à déplier
-    if (err.original) {
-      var d = document.createElement("details");
-      var s = document.createElement("summary");
-      s.textContent = "Message de Python (en anglais)";
-      var o = document.createElement("div");
-      o.className = "original";
-      o.textContent = err.original;
-      d.appendChild(s);
-      d.appendChild(o);
-      c.appendChild(d);
-    }
     if (err.line && err.line <= editor.lineCount()) {
       errorLine = err.line - 1;
       editor.addLineClass(errorLine, "background", "ligne-erreur");
