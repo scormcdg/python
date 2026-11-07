@@ -103,10 +103,15 @@
     var ox = this.tx(0), oy = this.ty(0);
     ctx.lineWidth = 1;
     ctx.strokeStyle = css("--carreau", "#dde6f3");
-    for (var x = ((ox % step) + step) % step; x < w; x += step) {
+    // Lignes comptées à partir des axes (x = ox + i × step) : la ligne n° 0 est toujours sous l'axe,
+    // sans dépendre des arrondis du dessin
+    var i, x, y, axes = this.opts.origin !== false;
+    for (i = Math.ceil(-ox / step); (x = ox + i * step) < w; i++) {
+      if (i === 0 && axes) continue; // l'axe est dessiné plus bas
       ctx.beginPath(); ctx.moveTo(Math.round(x) + 0.5, 0); ctx.lineTo(Math.round(x) + 0.5, h); ctx.stroke();
     }
-    for (var y = ((oy % step) + step) % step; y < h; y += step) {
+    for (i = Math.ceil(-oy / step); (y = oy + i * step) < h; i++) {
+      if (i === 0 && axes) continue;
       ctx.beginPath(); ctx.moveTo(0, Math.round(y) + 0.5); ctx.lineTo(w, Math.round(y) + 0.5); ctx.stroke();
     }
     if (this.opts.origin !== false) {
