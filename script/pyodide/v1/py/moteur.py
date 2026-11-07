@@ -139,7 +139,7 @@ def _lancer(texte):
     t = _tortue()
     if t:
         t._reset()
-    res = {"erreur": None, "trop": False, "tortue": None, "fonctions": []}
+    res = {"erreur": None, "trop": False, "fonctions": []}
     ns = None
     try:
         if job["type"] == "run":
@@ -167,7 +167,9 @@ def _lancer(texte):
             pass
     if ns is not None:
         res["fonctions"] = _fonctions(ns)
+    texte = json.dumps(res)
     t = _tortue()
     if t:
-        res["tortue"] = json.loads(t._snapshot())
-    return json.dumps(res)
+        # le tracé est déjà en JSON (t._snapshot()) : on le glisse tel quel, sans le déballer
+        texte = texte[:-1] + ', "tortue": ' + t._snapshot() + "}"
+    return texte
