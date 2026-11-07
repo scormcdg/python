@@ -4,16 +4,18 @@ Chargés par les paquets SCORM depuis `https://scormcdg.github.io/python/script/
 Les anciennes séries (Skulpt) utilisent toujours `script/v1/` et ne changent pas.
 
 La page est exactement la même que celle de `script/v1/` : seul le moteur Python change.
-Python est Pyodide 0.29.5 (le vrai Python 3.13), chargé depuis jsDelivr (environ 12 Mo la
-première fois, gardés ensuite par le navigateur). Il tourne dans un « worker », à part de la page.
+Python est Pyodide 0.29.5 (le vrai Python 3.13). Une copie est dans `vendor/pyodide/`
+(fichiers officiels du paquet npm `pyodide@0.29.5`, licence MPL-2.0) : tout vient de GitHub, sans autre site.
+Environ 12 Mo la première fois, gardés ensuite par le navigateur. Python tourne dans un « worker », à part de la page.
 
-- `js/app.js`, `js/canvas.js`, `js/checker.js`, `js/couleurs.js`, `js/scorm.js`, `css/`, `vendor/` :
+- `js/app.js`, `js/canvas.js`, `js/checker.js`, `js/couleurs.js`, `js/scorm.js`, `css/`, `vendor/codemirror/`, `vendor/fonts/` :
   copies identiques de `script/v1/` (même page, même dessin, même vérification)
 - `js/engine.js` : même interface et mêmes messages d'erreur que `script/v1/js/engine.js` ;
   exécution dans le worker, limite de 5 s (Python est alors arrêté puis rechargé), `input()` dans la console
 - `js/worker.js` : charge Pyodide, `py/moteur.py` et `py/turtle.py`
 - `py/moteur.py` : exécution des programmes, `input()` (JSPI), description des erreurs
 - `py/turtle.py` : la tortue, écrite en Python ; elle enregistre les déplacements comme `script/v1/js/turtle.js`
+- `vendor/pyodide/` : Pyodide (seulement le cœur : pas de numpy ni pandas, inutiles pour la tortue)
 - `js/turtle.js` : reçoit l'enregistrement de la tortue (`TurtleRec`) pour le dessin et la vérification
 
 `input()` met le programme en pause pendant que l'élève répond (JSPI). Il faut un navigateur récent :

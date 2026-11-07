@@ -4,13 +4,13 @@
  *   PyEngine.run(code, onOutput, options), callFunction(module, nom, args), getFunction(module, nom), translateError(err, code)
  * Python tourne dans un worker (js/worker.js, py/moteur.py) : la page reste utilisable, et un programme
  * qui dure plus de 5 secondes est arrêté. input() met le programme en pause (JSPI) pendant que l'élève répond.
- * Dépend de : turtle.js (facultatif) ; Pyodide est chargé depuis jsDelivr (PYODIDE_URL).
+ * Dépend de : turtle.js (facultatif) ; Pyodide 0.29.5 est dans vendor/pyodide/, à côté de ce dossier js/
+ * (une autre adresse peut être donnée avec var PYODIDE_URL = "…/" dans index.html).
  */
 (function (global) {
   "use strict";
 
   var TIME_LIMIT_MS = 5000;
-  var PYODIDE_URL = global.PYODIDE_URL || "https://cdn.jsdelivr.net/pyodide/v0.29.5/full/";
   var MSG_CHARGEMENT = "Chargement de Python… (la première fois, cela peut prendre quelques secondes)";
 
   /* Dossier des fichiers communs (celui qui contient js/engine.js) */
@@ -23,6 +23,8 @@
     }
     return src.replace(/js\/engine\.js(?:[?#].*)?$/, "");
   })();
+  /* Pyodide : copie sur GitHub, avec les fichiers communs (vendor/pyodide/) */
+  var PYODIDE_URL = global.PYODIDE_URL || BASE + "vendor/pyodide/";
 
   /*
    * input() : la question s'affiche dans la console, et l'élève tape sa réponse
