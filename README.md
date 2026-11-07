@@ -7,6 +7,12 @@ chargés par les paquets SCORM des séries d'exercices, depuis :
 
 Voir `script/v1/LISEZMOI.md` pour le détail des fichiers.
 
+Version avec le vrai Python (Pyodide, chargé depuis jsDelivr), même page et mêmes messages :
+
+    https://scormcdg.github.io/python/script/pyodide/v1/
+
+Voir `script/pyodide/v1/LISEZMOI.md`.
+
 Licences des bibliothèques incluses : Skulpt (MIT), CodeMirror (MIT),
 polices Atkinson Hyperlegible et JetBrains Mono (SIL Open Font License),
 voir les fichiers LICENSE dans `script/v1/vendor/`.
