@@ -6,7 +6,8 @@
  *
  * Messages reçus : { type: "init", base, pyodide (liste d'adresses, essayées dans l'ordre), tortue }, { type: "job", job } (job : voir py/moteur.py),
  *                  { type: "reponse", texte } (réponse à input())
- * Messages envoyés : { type: "pret" }, { type: "source", url } (adresse d'où Pyodide a été chargé), { type: "echec", texte }, { type: "out", texte, echo },
+ * Messages envoyés : { type: "pret" }, { type: "source", url } (adresse d'où Pyodide a été chargé),
+ *                    { type: "essai", url, dernier } et { type: "progres" } (chargement de Pyodide, surveillé par engine.js), { type: "echec", texte }, { type: "out", texte, echo },
  *                    { type: "input", invite }, { type: "fin", resultat }
  */
 /* global loadPyodide */
@@ -69,8 +70,37 @@ function sonder(url) {
     if (!r.ok) throw new Error("erreur " + r.status);
   }, function (e) { clearTimeout(minuterie); throw e; });
 }
+/*
+ * Progression du téléchargement : chaque morceau reçu est signalé à engine.js ({ type: "progres" }, au plus 2 fois
+ * par seconde). Si plus rien n'arrive pendant un moment, engine.js arrête ce worker et recommence avec l'adresse suivante
+ * (un téléchargement bloqué ne finit jamais et ne donne pas d'erreur).
+ */
+var fetchOrigine = self.fetch.bind(self), dernierSignal = 0;
+function signalerProgres() {
+  var t = Date.now();
+  if (t - dernierSignal >= 500) { dernierSignal = t; self.postMessage({ type: "progres" }); }
+}
+function fetchSuivi(entree, options) {
+  return fetchOrigine(entree, options).then(function (r) {
+    signalerProgres();
+    if (!r.body || typeof ReadableStream !== "function") return r;
+    var lecteur = r.body.getReader();
+    var flux = new ReadableStream({
+      pull: function (c) {
+        return lecteur.read().then(function (x) {
+          signalerProgres();
+          if (x.done) c.close(); else c.enqueue(x.value);
+        });
+      },
+      cancel: function (raison) { return lecteur.cancel(raison); }
+    });
+    return new Response(flux, { status: r.status, statusText: r.statusText, headers: r.headers });
+  });
+}
+
 function chargerPyodide(urls, i, erreurs) {
   var url = urls[i];
+  self.postMessage({ type: "essai", url: url, dernier: i + 1 >= urls.length });
   return sonder(url).then(function () {
     if (typeof loadPyodide !== "function") importScripts(url + "pyodide.js");
     return loadPyodide({ indexURL: url });
@@ -87,8 +117,10 @@ function chargerPyodide(urls, i, erreurs) {
 function demarrer(m) {
   importScripts(m.base + "js/couleurs.js");
   var urls = [].concat(m.pyodide);
+  self.fetch = fetchSuivi;
   return Promise.all([
-    chargerPyodide(urls, 0, []),
+    chargerPyodide(urls, 0, []).then(function (py) { self.fetch = fetchOrigine; return py; },
+      function (e) { self.fetch = fetchOrigine; throw e; }),
     texteDe(m.base + "py/moteur.py"),
     texteDe(m.base + "py/turtle.py")
   ]).then(function (r) {

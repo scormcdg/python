@@ -72,29 +72,53 @@
   /* ------------------------------------------------------------------ */
 
   var worker = null, pret = null, estPret = false, echec = false, ecouteur = null;
+  var DELAI_BLOCAGE = 15000; // chargement de Pyodide sans aucun progrès pendant ce temps : adresse suivante
 
   function demarrer() {
     estPret = false;
     echec = false;
+    pret = new Promise(function (resolve, reject) { lancerWorker(PYODIDE_URLS, resolve, reject); });
+    pret.catch(function () { echec = true; });
+  }
+
+  /*
+   * Un worker qui charge Pyodide depuis urls (dans l'ordre). Pendant le chargement depuis une adresse qui n'est pas
+   * la dernière, on surveille la progression : si rien n'arrive pendant DELAI_BLOCAGE, ce worker est arrêté et
+   * un nouveau recommence avec les adresses suivantes (un téléchargement bloqué ne donne jamais d'erreur).
+   */
+  function lancerWorker(urls, resolve, reject) {
     var url = BASE + "js/worker.js";
     // Un worker doit venir du même site que la page : un petit worker « blob » charge worker.js (GitHub ou paquet)
-    var blob = new Blob(["importScripts(" + JSON.stringify(url) + ");"], { type: "text/javascript" });
-    worker = new Worker(URL.createObjectURL(blob));
-    pret = new Promise(function (resolve, reject) {
-      worker.onmessage = function (ev) {
-        var m = ev.data;
-        if (m.type === "pret") { estPret = true; resolve(); return; }
-        if (m.type === "echec") { reject(new Error(m.texte)); return; }
-        if (m.type === "source") { if (global.console) global.console.info("Python (Pyodide) chargé depuis " + m.url); return; }
-        if (ecouteur) ecouteur(m);
-      };
-      worker.onerror = function (e) {
-        if (e && e.preventDefault) e.preventDefault();
-        reject(new Error((e && e.message) || "worker"));
-      };
-    });
-    pret.catch(function () { echec = true; });
-    worker.postMessage({ type: "init", base: BASE, pyodide: PYODIDE_URLS, tortue: !!global.TURTLE_MODULE_SRC });
+    var adresse = URL.createObjectURL(new Blob(["importScripts(" + JSON.stringify(url) + ");"], { type: "text/javascript" }));
+    var w = new Worker(adresse);
+    worker = w;
+    var enCours = null, dernierProgres = Date.now();
+    var surveillance = setInterval(function () {
+      if (w !== worker || estPret) { clearInterval(surveillance); return; }
+      if (!enCours || enCours.dernier || Date.now() - dernierProgres < DELAI_BLOCAGE) return;
+      clearInterval(surveillance);
+      if (global.console) global.console.warn("Python (Pyodide) : le chargement depuis " + enCours.url + " est bloqué, on passe à l'adresse suivante");
+      w.terminate();
+      URL.revokeObjectURL(adresse);
+      lancerWorker(urls.slice(urls.indexOf(enCours.url) + 1), resolve, reject);
+    }, 1000);
+    w.onmessage = function (ev) {
+      var m = ev.data;
+      if (w !== worker) return;
+      if (m.type === "progres") { dernierProgres = Date.now(); return; }
+      if (m.type === "essai") { enCours = m; dernierProgres = Date.now(); return; }
+      if (m.type === "pret") { clearInterval(surveillance); URL.revokeObjectURL(adresse); estPret = true; resolve(); return; }
+      if (m.type === "echec") { clearInterval(surveillance); reject(new Error(m.texte)); return; }
+      if (m.type === "source") { if (global.console) global.console.info("Python (Pyodide) chargé depuis " + m.url); return; }
+      if (ecouteur) ecouteur(m);
+    };
+    w.onerror = function (e) {
+      if (e && e.preventDefault) e.preventDefault();
+      if (w !== worker) return;
+      clearInterval(surveillance);
+      reject(new Error((e && e.message) || "worker"));
+    };
+    w.postMessage({ type: "init", base: BASE, pyodide: urls, tortue: !!global.TURTLE_MODULE_SRC });
   }
 
   /* Pendant le premier chargement : un message dans la console, retiré quand Python est prêt */
