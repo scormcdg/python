@@ -17,7 +17,15 @@
   };
 
   // durée (en secondes) d'une action à la vitesse 6
-  var DUREES = { avancer: 0.32, sauter: 0.5, tourner: 0.22, frapper: 0.3, cle: 0.2, ouvrir: 0.6, lire: 0.7, regarder: 0.18, echec: 0.9 };
+  var DUREES = { avancer: 0.32, sauter: 0.5, tourner: 0.22, frapper: 0.3, cle: 0.2, ouvrir: 0.6, lire: 0.7, regarder: 0.18, echec: 0.4 };
+  /*
+   * Échecs : l'animation montre le geste raté.
+   *  - chocs (bord, caisse, marche, saut raté) : une courte secousse ;
+   *  - « vide » (frapper sans caisse) : un seul geste de frappe dans l'air ;
+   *  - les autres (pas sur le coffre, pas de clé, pas de panneau…) : Robi en rouge avec « Aïe ! », sans mouvement.
+   */
+  var ECHECS_CHOC = { bord: 1, caisse: 1, mur: 1, rien: 1, court: 1, haut: 1 };
+  function dureeBase(e) { return DUREES[e.t] || 0.2; }
 
   function DessinJeu(canvas, options) {
     this.canvas = canvas;
@@ -267,18 +275,26 @@
     var vitesse = function () { var v = self.opts.getSpeed ? self.opts.getSpeed() : 6; return v; };
     // durée totale à la vitesse 6, pour l'accélération éventuelle (la vitesse peut changer pendant l'animation)
     var total6 = 0;
-    evenements.forEach(function (e) { total6 += DUREES[e.t] || 0.2; });
+    evenements.forEach(function (e) { total6 += dureeBase(e); });
     function duree(e) {
       var v = vitesse();
       if (!v) return 0;
-      var d = (DUREES[e.t] || 0.2) * 6 / v;
+      var d = dureeBase(e) * 6 / v;
       var totalV = total6 * 6 / v;
       if (options.dureeMax && totalV > options.dureeMax) d *= options.dureeMax / totalV;
       return d;
     }
 
+    // options.onEchec : appelé dès que l'animation arrive à l'échec (pour afficher le message tout de suite)
+    var echecSignale = false;
+    function signalerEchec() {
+      if (echecSignale || !options.onEchec) return;
+      echecSignale = true;
+      options.onEchec();
+    }
     function finir() {
       for (; i < evenements.length; i++) appliquer(evenements[i], s, monde);
+      if (evenements.length && evenements[evenements.length - 1].t === "echec") signalerEchec();
       self.frame = null; self.finir = null;
       self.image(monde, s);
       if (options.onDone) options.onDone();
@@ -297,6 +313,7 @@
       }
       if (i >= evenements.length) { finir(); return; }
       var e = evenements[i], f = Math.min(1, t / Math.max(duree(e), 1e-6));
+      if (e.t === "echec") signalerEchec();
       self.imageEnCours(monde, s, e, f);
       self.frame = global.requestAnimationFrame(tick);
     }
@@ -319,14 +336,15 @@
     } else if (e.t === "frapper") {
       r.decalage = s.dir * 0.18 * Math.sin(f * Math.PI);
     } else if (e.t === "echec") {
-      r.decalage = 0.06 * Math.sin(f * Math.PI * 8);
+      if (e.type === "vide") r.decalage = s.dir * 0.18 * Math.sin(f * Math.PI);    // frappe dans l'air
+      else if (ECHECS_CHOC[e.type]) r.decalage = 0.06 * Math.sin(f * Math.PI * 4); // courte secousse
     }
     this.fond(monde, s);
-    this.dessinerRobot(r.x, r.y, r.dir, { cle: s.cle, echec: e.t === "echec", decalage: r.decalage });
+    this.dessinerRobot(r.x, r.y, r.dir, { cle: s.cle, echec: e.t === "echec" && (e.type !== "vide" || f > 0.5), decalage: r.decalage });
     if (e.t === "lire") this.bulle(s.x, s.y, String(e.valeur));
     if (e.t === "regarder") this.bulle(s.x, s.y, String(e.valeur), "#56607a");
     if (e.t === "ouvrir" && f > 0.4) { s.ouvert = true; this.fond(monde, s); this.dessinerRobot(r.x, r.y, r.dir, { cle: s.cle }); s.ouvert = false; }
-    if (e.t === "echec") this.bulle(s.x, s.y, "Aïe !", COULEURS.echec);
+    if (e.t === "echec" && (e.type !== "vide" || f > 0.5)) this.bulle(s.x, s.y, "Aïe !", COULEURS.echec);
   };
 
   global.DessinJeu = DessinJeu;

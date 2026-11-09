@@ -165,11 +165,15 @@
   var DUREE_MAX_BOUCLE = 120;
   function arreteParLimite(r) { return !!(r.erreur && /a fait plus de \d+ actions/.test(r.erreur.message || "")); }
 
+  /* apres : à la fin de l'animation ; s'il y a un échec, apres est appelé dès que Robi échoue (le message s'affiche tout de suite) */
   function animer(r, apres) {
     $("btn-finir").hidden = false;
+    var fait = false;
+    function message() { if (!fait && apres) { fait = true; apres(); } }
     dessin.rejouer(r.monde, r.evenements, {
       dureeMax: arreteParLimite(r) ? DUREE_MAX_BOUCLE : 0,
-      onDone: function () { $("btn-finir").hidden = true; if (apres) apres(); }
+      onEchec: message,
+      onDone: function () { $("btn-finir").hidden = true; message(); }
     });
   }
 
