@@ -19,6 +19,9 @@ Environ 12 Mo la première fois, gardés ensuite par le navigateur. Python tourn
 - `py/moteur.py` : exécution des programmes, `input()` (JSPI), description des erreurs
 - `py/turtle.py` : la tortue, écrite en Python ; elle enregistre les déplacements comme `script/v1/js/turtle.js`
 - `vendor/pyodide/` : Pyodide (seulement le cœur : pas de numpy ni pandas, inutiles pour la tortue)
+- `py/robi.py` : les commandes du jeu Robi, en Python (mêmes règles et mêmes messages que `script/v1/js/jeu.js`)
+- `js/jeu.js` : le jeu Robi (lance une partie, renvoie les événements) ; `js/jeu-app.js`, `js/jeu-dessin.js` :
+  copies identiques de `script/v1/` (même page de jeu, même animation)
 - `js/turtle.js` : reçoit l'enregistrement de la tortue (`TurtleRec`) pour le dessin et la vérification
 
 `input()` met le programme en pause pendant que l'élève répond (JSPI). Il faut un navigateur récent :
@@ -28,6 +31,8 @@ avec un message clair.
 Pour faire passer une série à cette version, dans le paquet :
 - `index.html` : `var COMMUN = "https://scormcdg.github.io/python/script/pyodide/v1/";`
 - `charger.js` : enlever les deux lignes `vendor/skulpt/…` de la liste SCRIPTS.
+
+C'est pareil pour Robi l'explorateur (paquet avec `APP = "js/jeu-app.js"`).
 
 Différence visible avec Skulpt : `print(heading())`, `print(xcor())`, `print(pos())` affichent
 des nombres à virgule (`30.0`, `(10.0, 0.0)`), comme le vrai Python.

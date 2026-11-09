@@ -1,6 +1,7 @@
 /*
  * Python (Pyodide) exécuté à part de la page, dans un « worker » : une boucle infinie ne bloque pas la page,
  * et engine.js peut l'arrêter au bout de 5 secondes.
+ * Charge aussi py/moteur.py, py/turtle.py et py/robi.py (jeu Robi).
  * Ce fichier est chargé par engine.js (importScripts depuis un petit worker « blob »,
  * ce qui marche aussi quand les fichiers communs sont sur GitHub et le paquet dans Moodle).
  *
@@ -122,7 +123,8 @@ function demarrer(m) {
     chargerPyodide(urls, 0, []).then(function (py) { self.fetch = fetchOrigine; return py; },
       function (e) { self.fetch = fetchOrigine; throw e; }),
     texteDe(m.base + "py/moteur.py"),
-    texteDe(m.base + "py/turtle.py")
+    texteDe(m.base + "py/turtle.py"),
+    texteDe(m.base + "py/robi.py")
   ]).then(function (r) {
     pyodide = r[0];
     var ecrireSortie = function (buf) { self.ecrire(decodeur.decode(buf, { stream: true }), false); return buf.length; };
@@ -130,6 +132,7 @@ function demarrer(m) {
     pyodide.setStderr({ write: ecrireSortie });
     pyodide.runPython(r[1], { filename: "<moteur>" });
     pyodide.globals.get("_installer")(r[2], !!m.tortue);
+    pyodide.globals.get("_installer_robi")(r[3]);
     // premier import de la tortue tout de suite, pour que la première exécution soit rapide
     if (m.tortue) pyodide.runPython("import turtle as _t\ndel _t");
     self.postMessage({ type: "pret" });

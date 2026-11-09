@@ -326,7 +326,11 @@
 
   var compteur = 0, dernieresReponses = null;
 
-  /* options.inputs (facultatif) : réponses données à input(), dans l'ordre (vérification). */
+  /*
+   * options.inputs (facultatif) : réponses données à input(), dans l'ordre (vérification).
+   * options.robi (facultatif) : { monde, autorisees } pour le jeu Robi ; le résultat contient alors
+   * robi = { evenements, final } (ou null si Python a été arrêté).
+   */
   function run(code, onOutput, options) {
     var output = "";
     var printed = ""; // seulement ce qu'affiche print() (sans les questions et réponses de input())
@@ -342,10 +346,16 @@
     function echo(t) { output += t; if (onOutput) onOutput(t); }
     var id = ++compteur;
     var job = { type: "run", id: id, code: code, inputs: inputs ? inputs.map(String) : null };
+    if (options && options.robi) job.robi = options.robi;
     return lancer(job, {
       out: function (t, e) { if (e) echo(t); else out(t); },
       input: function (q) { return askInConsole(q, out, function () { return output; }); }
     }).then(function (r) {
+      var res = resultat(r);
+      res.robi = r.robi || null;
+      return res;
+    });
+    function resultat(r) {
       var sp = erreurSpeciale(r, code);
       if (sp) return { module: null, error: sp, output: output };
       if (global.TurtleRec) global.TurtleRec.charger(r.tortue);
@@ -357,7 +367,7 @@
       }
       if (r.erreur) return { module: null, error: avecOriginal(translateError(erreurPython(r.erreur), code), r.erreur), output: output };
       return { module: { id: id, fonctions: r.fonctions || [] }, error: null, output: output, printed: printed };
-    });
+    }
   }
 
   /* Appelle une commande définie par l'élève ; args (facultatif) : valeurs JS (nombres, textes). Tortue remise à zéro. */

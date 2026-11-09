@@ -2,7 +2,8 @@
 #
 # _lancer(json) exécute un programme ou appelle une commande et renvoie un texte JSON :
 #   { "erreur": {type, msg, ligne} ou null, "trop": bool, "tortue": instantané ou null,
-#     "fonctions": [noms des commandes définies] }
+#     "fonctions": [noms des commandes définies], "robi": événements et état final (jeu Robi) ou null }
+# Jeu Robi : si le job contient "robi": { monde, autorisees }, le programme joue sur ce terrain (py/robi.py).
 #
 # input() : sans réponses prévues, le programme est mis en pause (JSPI, run_sync de Pyodide)
 # jusqu'à la réponse tapée dans la console. Avec réponses prévues (vérification), elles sont
@@ -95,6 +96,15 @@ def _installer(src, active):
     sys.modules.pop("turtle", None)
 
 
+def _installer_robi(src):
+    """Charge py/robi.py (les commandes de Robi) ; elles ne deviennent disponibles qu'au premier programme Robi."""
+    module = types.ModuleType("_robi")
+    module.__file__ = "<robi>"
+    exec(compile(src, "<robi>", "exec"), module.__dict__)
+    module._installe = False
+    sys.modules["_robi"] = module
+
+
 def _tortue():
     t = sys.modules.get("turtle")
     return t if t is not None and hasattr(t, "_reset") else None
@@ -139,6 +149,12 @@ def _lancer(texte):
     t = _tortue()
     if t:
         t._reset()
+    robi = sys.modules.get("_robi") if job.get("robi") else None
+    if robi is not None:
+        if not robi._installe:
+            robi._installer()
+            robi._installe = True
+        robi._nouvelle_partie(job["robi"]["monde"], job["robi"].get("autorisees"))
     res = {"erreur": None, "trop": False, "fonctions": []}
     ns = None
     try:
@@ -167,6 +183,9 @@ def _lancer(texte):
             pass
     if ns is not None:
         res["fonctions"] = _fonctions(ns)
+    if robi is not None:
+        res["robi"] = robi._etat()
+        robi._partie = None
     texte = json.dumps(res)
     t = _tortue()
     if t:
