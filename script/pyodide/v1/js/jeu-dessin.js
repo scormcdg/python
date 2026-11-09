@@ -12,12 +12,13 @@
     caisse: "#c98d4b", caisseBord: "#8a5a2b",
     cle: "#e8b923", coffre: "#8b5a2b", coffreBord: "#5c3a19", or: "#f5d142",
     robot: "#2a9d8f", robotFonce: "#1f7268", oeil: "#ffffff", pupille: "#1d2b53",
+    bras: "#8d99ae", brasBord: "#4a5568", poing: "#5c677d",
     panneau: "#d7b98c", poteau: "#7a5634", texte: "#1d2b53",
     echec: "#b63a2b", bulle: "#ffffff"
   };
 
   // durée (en secondes) d'une action à la vitesse 6
-  var DUREES = { avancer: 0.32, sauter: 0.5, tourner: 0.22, frapper: 0.3, cle: 0.2, ouvrir: 0.6, lire: 0.7, regarder: 0.18, echec: 0.4 };
+  var DUREES = { avancer: 0.32, sauter: 0.5, tourner: 0.22, frapper: 0.45, cle: 0.2, ouvrir: 0.6, lire: 0.7, regarder: 0.18, echec: 0.4 };
   /*
    * Échecs : l'animation montre le geste raté.
    *  - chocs (bord, caisse, marche, saut raté) : une courte secousse ;
@@ -212,6 +213,30 @@
     ctx.beginPath(); ctx.arc(t * 0.1, -t * 0.56, t * 0.13, 0, Math.PI * 2); ctx.fill();
     ctx.fillStyle = COULEURS.pupille;
     ctx.beginPath(); ctx.arc(t * 0.15, -t * 0.56, t * 0.06, 0, Math.PI * 2); ctx.fill();
+    // bras robotique : replié contre le corps, il se déplie pour frapper (opts.bras de 0 à 1)
+    var ext = Math.max(0, Math.min(1, opts.bras || 0));
+    var sx = c * 0.22, sy = -c * 0.29;              // épaule, à l'avant du corps
+    var long = c * (0.05 + 0.19 * ext);             // longueur du bras
+    var ep = c * 0.07, pw = c * 0.12, ph = c * 0.15; // épaisseur du bras, taille du poing
+    ctx.lineWidth = Math.max(1, c * 0.018);
+    ctx.fillStyle = COULEURS.bras; ctx.strokeStyle = COULEURS.brasBord;
+    roundRect(ctx, sx, sy - ep / 2, long, ep, ep / 2); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = COULEURS.poing;
+    roundRect(ctx, sx + long, sy - ph / 2, pw, ph, c * 0.03); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = COULEURS.robotFonce;
+    ctx.beginPath(); ctx.arc(sx, sy, c * 0.045, 0, Math.PI * 2); ctx.fill();
+    // choc contre la caisse
+    if (opts.impact) {
+      var ix = sx + long + pw + c * 0.02;
+      ctx.strokeStyle = "#f2b705"; ctx.lineWidth = Math.max(1.5, c * 0.03); ctx.lineCap = "round";
+      ctx.beginPath();
+      for (var a = -2; a <= 2; a++) {
+        var ang = a * 0.5;
+        ctx.moveTo(ix + Math.cos(ang) * c * 0.04, sy + Math.sin(ang) * c * 0.04);
+        ctx.lineTo(ix + Math.cos(ang) * c * 0.13, sy + Math.sin(ang) * c * 0.13);
+      }
+      ctx.stroke();
+    }
     ctx.restore();
     // clé portée
     if (opts.cle) this.dessinerCle(cx - dir * c * 0.05, base - c * 0.95, c * 0.32);
@@ -230,6 +255,13 @@
     ctx.fillText(texte, left + w / 2, top - h / 2);
     ctx.restore();
   };
+
+  /* Coup de poing : le bras se déplie vite, reste un instant tendu, puis se replie (f de 0 à 1 → 0 à 1 à 0) */
+  function coup(f) {
+    if (f < 0.3) return f / 0.3;
+    if (f < 0.55) return 1;
+    return Math.max(0, 1 - (f - 0.55) / 0.45);
+  }
 
   function roundRect(ctx, x, y, w, h, r) {
     ctx.beginPath();
@@ -334,13 +366,16 @@
     } else if (e.t === "tourner") {
       r.dir = f < 0.5 ? -e.dir : e.dir;
     } else if (e.t === "frapper") {
-      r.decalage = s.dir * 0.18 * Math.sin(f * Math.PI);
+      r.bras = coup(f);
+      r.decalage = s.dir * 0.04 * r.bras;
+      r.impact = f > 0.3 && f < 0.6;
     } else if (e.t === "echec") {
-      if (e.type === "vide") r.decalage = s.dir * 0.18 * Math.sin(f * Math.PI);    // frappe dans l'air
+      if (e.type === "vide") { r.bras = coup(f); r.decalage = s.dir * 0.04 * r.bras; } // frappe dans l'air
       else if (ECHECS_CHOC[e.type]) r.decalage = 0.06 * Math.sin(f * Math.PI * 4); // courte secousse
     }
     this.fond(monde, s);
-    this.dessinerRobot(r.x, r.y, r.dir, { cle: s.cle, echec: e.t === "echec" && (e.type !== "vide" || f > 0.5), decalage: r.decalage });
+    this.dessinerRobot(r.x, r.y, r.dir, { cle: s.cle, echec: e.t === "echec" && (e.type !== "vide" || f > 0.5), decalage: r.decalage,
+      bras: r.bras, impact: r.impact });
     if (e.t === "lire") this.bulle(s.x, s.y, String(e.valeur));
     if (e.t === "regarder") this.bulle(s.x, s.y, String(e.valeur), "#56607a");
     if (e.t === "ouvrir" && f > 0.4) { s.ouvert = true; this.fond(monde, s); this.dessinerRobot(r.x, r.y, r.dir, { cle: s.cle }); s.ouvert = false; }
