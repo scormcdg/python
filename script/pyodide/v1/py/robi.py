@@ -14,7 +14,7 @@
 import builtins
 import math
 
-MAX_ACTIONS = 3000
+MAX_ACTIONS = 300  # la plus longue solution des niveaux en fait 64
 
 _partie = None
 

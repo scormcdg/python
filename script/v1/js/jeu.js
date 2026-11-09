@@ -18,7 +18,7 @@
 (function (global) {
   "use strict";
 
-  var MAX_ACTIONS = 3000;
+  var MAX_ACTIONS = 300; // la plus longue solution des niveaux en fait 64
 
   /* Générateur pseudo-aléatoire reproductible (pour tirer des terrains) */
   function hasard(graine) {

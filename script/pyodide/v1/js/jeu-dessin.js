@@ -250,17 +250,32 @@
     this.image(monde, etatInitial(monde));
   };
 
-  /* Rejoue les événements ; options.onDone à la fin. */
+  /*
+   * Rejoue les événements ; options.onDone à la fin.
+   * options.dureeMax (secondes, facultatif) : si l'animation devait durer plus longtemps à la vitesse choisie,
+   * elle est accélérée pour tenir dans ce temps (utilisé quand Robi a été arrêté par la limite d'actions).
+   */
   DessinJeu.prototype.rejouer = function (monde, evenements, options) {
     options = options || {};
     var self = this;
     this.stop();
     this.monde = monde;
     this.evenements = evenements;
+    this.dureeMax = options.dureeMax || 0;
     this.preparer(monde);
     var s = etatInitial(monde), i = 0, t = 0, last = null;
     var vitesse = function () { var v = self.opts.getSpeed ? self.opts.getSpeed() : 6; return v; };
-    function duree(e) { var v = vitesse(); return v ? (DUREES[e.t] || 0.2) * 6 / v : 0; }
+    // durée totale à la vitesse 6, pour l'accélération éventuelle (la vitesse peut changer pendant l'animation)
+    var total6 = 0;
+    evenements.forEach(function (e) { total6 += DUREES[e.t] || 0.2; });
+    function duree(e) {
+      var v = vitesse();
+      if (!v) return 0;
+      var d = (DUREES[e.t] || 0.2) * 6 / v;
+      var totalV = total6 * 6 / v;
+      if (options.dureeMax && totalV > options.dureeMax) d *= options.dureeMax / totalV;
+      return d;
+    }
 
     function finir() {
       for (; i < evenements.length; i++) appliquer(evenements[i], s, monde);

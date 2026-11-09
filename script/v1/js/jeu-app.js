@@ -161,9 +161,16 @@
     $("vitesse-valeur").textContent = v >= 11 ? "instantanée" : v + (v === 1 ? " (la plus lente)" : v === 10 ? " (rapide)" : "");
   }
 
+  /* Robi arrêté par la limite d'actions (boucle sans fin) : animation de 2 minutes au plus */
+  var DUREE_MAX_BOUCLE = 120;
+  function arreteParLimite(r) { return !!(r.erreur && /a fait plus de \d+ actions/.test(r.erreur.message || "")); }
+
   function animer(r, apres) {
     $("btn-finir").hidden = false;
-    dessin.rejouer(r.monde, r.evenements, { onDone: function () { $("btn-finir").hidden = true; if (apres) apres(); } });
+    dessin.rejouer(r.monde, r.evenements, {
+      dureeMax: arreteParLimite(r) ? DUREE_MAX_BOUCLE : 0,
+      onDone: function () { $("btn-finir").hidden = true; if (apres) apres(); }
+    });
   }
 
   function bilanPartie(r) {
@@ -384,7 +391,7 @@
 
   function redessiner() {
     if (!dessin || busy || dessin.animating()) return;
-    if (dessin.evenements && dessin.evenements.length) dessin.rejouer(dessin.monde, dessin.evenements, {});
+    if (dessin.evenements && dessin.evenements.length) dessin.rejouer(dessin.monde, dessin.evenements, { dureeMax: dessin.dureeMax });
     else if (dessin.monde) dessin.afficher(dessin.monde);
   }
 
