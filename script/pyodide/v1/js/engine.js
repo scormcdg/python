@@ -288,6 +288,65 @@
     return null;
   }
 
+  /*
+   * Commande utilisée sans parenthèses : « a = lire_nombre », « if obstacle_devant: », « sauter(lire_nombre) »,
+   * « deux » (commande définie plus haut), « x = input »… Python ne dit rien (le nom désigne la commande elle-même,
+   * pas son résultat), et l'erreur arrive plus loin avec un message trompeur, ou jamais.
+   * Vérifié pour : les commandes de Robi, de la tortue (avec « from turtle import »), print et input,
+   * et les commandes définies avec def dans le programme. Un nom aussi utilisé comme variable est ignoré.
+   */
+  var TORTUE_PARENS = NOMS_TORTUE.concat(["fd", "bk", "back", "lt", "rt", "pu", "pd", "setx", "sety", "seth", "pos", "position",
+    "xcor", "ycor", "heading", "isdown", "clear", "reset", "ht", "st"]);
+  var AVEC_VALEURS = { forward: 1, fd: 1, backward: 1, back: 1, bk: 1, left: 1, lt: 1, right: 1, rt: 1, goto: 1, setx: 1, sety: 1,
+    setheading: 1, seth: 1, circle: 1, write: 1, print: 1 };
+  // commandes de Python qui attendent une valeur (et pas une commande) entre les parenthèses
+  var VALEURS_PYTHON = ["print", "input", "int", "float", "str", "bool", "range", "len", "abs", "round", "min", "max", "sum", "list", "type"];
+  function findMissingParens(code) {
+    var src = hideTripleQuotes(String(code || "").replace(/\r\n?/g, "\n"));
+    var lines = src.split("\n").map(function (l) { return l.replace(STRING_RE, '""').replace(/#.*$/, ""); });
+    var all = lines.join("\n");
+    var commandes = {}, variables = {}, m, re;
+    // noms utilisés comme variables (affectation, boucle for, paramètres) : on ne les vérifie pas
+    re = /^\s*([A-Za-z_]\w*)\s*(?:[-+*\/%]|\/\/|\*\*)?=(?!=)/gm;
+    while ((m = re.exec(all))) variables[m[1]] = true;
+    re = /^\s*for\s+([A-Za-z_]\w*)\s+in\b/gm;
+    while ((m = re.exec(all))) variables[m[1]] = true;
+    re = /^\s*def\s+([A-Za-z_]\w*)\s*\(([^)]*)\)/gm;
+    while ((m = re.exec(all))) {
+      commandes[m[1]] = m[2].trim() ? "(…)" : "()";
+      m[2].split(",").forEach(function (p) { p = p.replace(/[=:].*$/, "").trim(); if (p) variables[p] = true; });
+    }
+    function ajouter(liste, forme) { (liste || []).forEach(function (n) { if (!commandes[n]) commandes[n] = forme(n); }); }
+    ajouter(global.EXTRA_KNOWN_NAMES, function () { return "()"; });
+    if (/^\s*from\s+turtle\s+import\b/m.test(all)) ajouter(TORTUE_PARENS, function (n) { return AVEC_VALEURS[n] ? "(…)" : "()"; });
+    ajouter(["print", "input"], function (n) { return AVEC_VALEURS[n] ? "(…)" : "()"; });
+    for (var i = 0; i < lines.length; i++) {
+      var t = lines[i];
+      if (/^\s*(from|import)\b/.test(t)) continue;
+      var nom, apres, r2 = /(^|[^\w.])([A-Za-z_]\w*)(?!\w)/g;
+      while ((m = r2.exec(t))) {
+        nom = m[2];
+        if (!commandes.hasOwnProperty(nom) || variables[nom]) continue;
+        apres = t.slice(m.index + m[0].length);
+        if (/^\s*\(/.test(apres)) continue;                     // appel normal
+        if (/^\s*=(?!=)/.test(apres)) continue;                 // affectation ou nom=valeur
+        if (new RegExp("^\\s*def\\s+" + nom + "\\b").test(t)) continue;
+        // commande passée à une autre commande qu'on ne connaît pas (onscreenclick(f), map(f, …)) : voulu, pas signalé
+        var recoit = /([A-Za-z_]\w*)\s*\(\s*(?:[^()]*,\s*)?$/.exec(t.slice(0, m.index + m[1].length));
+        if (recoit && !commandes.hasOwnProperty(recoit[1]) && VALEURS_PYTHON.indexOf(recoit[1]) < 0) continue;
+        // raccourci : « tp = teleportation », puis tp(…) plus loin dans le programme
+        var alias = new RegExp("^\\s*([A-Za-z_]\\w*)\\s*=\\s*" + nom + "\\s*$").exec(t);
+        if (alias && new RegExp("(^|[^\\w.])" + alias[1] + "\\s*\\(").test(all)) continue;
+        var forme = nom + commandes[nom];
+        var seul = new RegExp("^\\s*" + nom + "\\s*$").test(t);
+        return { line: i + 1, raw: "ParensRule: " + nom,
+          message: "Il manque les parenthèses (ligne " + (i + 1) + ") : écrivez « " + forme + " » et pas « " + nom + " »." +
+            (seul ? "" : " Sans parenthèses, « " + nom + " » désigne la commande elle-même, pas son résultat.") };
+      }
+    }
+    return null;
+  }
+
   /* Une seule tortue, commandes écrites directement : seul « from turtle import * » est accepté. */
   function findForbiddenImport(code) {
     if (!global.TURTLE_MODULE_SRC) return null;
@@ -337,7 +396,7 @@
     var inputs = options && options.inputs;
     dernieresReponses = inputs || null;
     if (global.TurtleRec) global.TurtleRec.reset(); // la tortue est facultative
-    var dup = findIndentProblem(code) || findForbiddenImport(code) || findDuplicateDef(code) || findShadowedName(code) || findAccentName(code);
+    var dup = findIndentProblem(code) || findForbiddenImport(code) || findDuplicateDef(code) || findShadowedName(code) || findMissingParens(code) || findAccentName(code);
     if (dup) {
       dup = { line: dup.line, raw: dup.raw, message: avecType(dup.message, dup.raw) };
       return Promise.resolve({ module: null, error: dup, output: "" });
@@ -1034,6 +1093,7 @@
   function typeErreur(raw, msg) {
     if (/^(TooManyInputs|InputIndisponible|LoadError)/.test(raw) || /^RuntimeError: Robi /.test(raw)) return null; // vérification, jeu Robi
     // Ce que le vrai Python accepte, mais que le cours refuse
+    if (/^ParensRule/.test(raw)) return null; // « Il manque les parenthèses… » se suffit à lui-même
     if (/^(IndentationRule|ImportRule|DuplicateDefinition|ShadowRule)/.test(raw) ||
         /^Les noms ne peuvent pas contenir d'accent/.test(msg) || /n'est pas utilisé dans ce cours/.test(msg)) return "Règle du cours";
     if (/^(IndentationRule|IndentationError)/.test(raw)) return "Erreur d'indentation";

@@ -221,19 +221,7 @@
   function jouer(code, monde, autorisees) {
     installer();
     var depart = copierMonde(monde);
-    // « avancer » seul sur une ligne : Python ne dit rien, mais Robi ne fait rien non plus
-    var lignes = String(code || "").split("\n");
-    for (var i = 0; i < lignes.length; i++) {
-      var m = /^\s*([a-z_]+)\s*(#.*)?$/.exec(lignes[i]);
-      if (m && NOMS.indexOf(m[1]) >= 0) {
-        return Promise.resolve({
-          ok: false,
-          erreur: { message: "Il manque les parenthèses : écrivez « " + m[1] + "() » et pas « " + m[1] + " » (ligne " + (i + 1) + ").", line: i + 1 },
-          output: "", evenements: [], monde: depart,
-          final: { x: depart.depart, dir: depart.dir, cle: false, ouvert: false }
-        });
-      }
-    }
+    // « avancer » sans parenthèses : vérifié par engine.js (findMissingParens), comme dans les séries
     nouvellePartie(monde);
     partie.autorisees = autorisees || null;   // commandes permises dans ce niveau (null = toutes)
     return global.PyEngine.run(code).then(function (r) {
