@@ -543,7 +543,8 @@
 
   /*
    * « Envoyer mes résultats » (si serie.js donne une adresse Neon) : vérifie à nouveau chaque exercice noté
-   * avec le code actuel de l'élève, puis enregistre un JSON dans la table « reponses » de Neon :
+   * avec le code actuel de l'élève, puis enregistre un JSON dans la table de Neon donnée par serie.js (table, « reponses » sinon),
+   * colonne data (jsonb) :
    * { serie, titre, login_chiffre, date, python, exercices: [{ id, titre, code, tests: [1, 0, …] }] }
    * login_chiffre : login Moodle chiffré (RSA-OAEP, SHA-256, base64) avec la clé publique de serie.js (cle) ;
    *         seul le viewer des résultats, qui a la clé privée, peut le déchiffrer. Le chiffrement ajoute du hasard :
@@ -589,6 +590,8 @@
         if (!login) return;
       }
       if (!window.crypto || !crypto.subtle) { dire("L'envoi n'est pas possible dans ce navigateur.", false); return; }
+      var table = reglages.table || "reponses";
+      if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(table)) { dire("Nom de table incorrect dans serie.js : " + table, false); return; }
       if (current) state.code[current.id] = editor.getValue();
       var envoi = {
         serie: SERIE.id, titre: SERIE.titre,
@@ -616,7 +619,7 @@
         return suite.then(function () {
           dire("Envoi…");
           return import("https://esm.sh/@neondatabase/serverless@1").then(function (m) {
-            return m.neon(reglages.neon).query("INSERT INTO reponses (data) VALUES ($1::jsonb)", [JSON.stringify(envoi)]);
+            return m.neon(reglages.neon).query("INSERT INTO " + table + " (data) VALUES ($1::jsonb)", [JSON.stringify(envoi)]);
           });
         }).then(function () {
           var t = new Date();
