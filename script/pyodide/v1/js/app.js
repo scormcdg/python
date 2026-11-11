@@ -556,11 +556,11 @@
   /*
    * « Envoyer mes résultats » (si serie.js donne une adresse Neon) : vérifie à nouveau chaque exercice noté
    * avec le code actuel de l'élève, puis enregistre un JSON dans la table « reponses » de Neon :
-   * { serie, titre, eleve, login_chiffre, date, python, exercices: [{ id, titre, code, tests: [1, 0, …] }] }
-   * eleve : pseudonyme = 16 premiers caractères (hexadécimal) du SHA-256 de sel + login Moodle (sel : serie.js).
-   *         Le même élève a le même pseudonyme dans toutes les séries qui ont le même sel ; ni nom ni login en clair.
+   * { serie, titre, login_chiffre, date, python, exercices: [{ id, titre, code, tests: [1, 0, …] }] }
    * login_chiffre : login Moodle chiffré (RSA-OAEP, SHA-256, base64) avec la clé publique de serie.js (cle) ;
-   *         seul le viewer des résultats, qui a la clé privée, peut le déchiffrer.
+   *         seul le viewer des résultats, qui a la clé privée, peut le déchiffrer. Le chiffrement ajoute du hasard :
+   *         le même login donne un texte différent à chaque envoi (on ne peut pas retrouver un élève en chiffrant son login).
+   * Sans clé dans serie.js (ancien réglage) : eleve = pseudonyme, SHA-256 de sel + login (16 caractères).
    * tests : une valeur par vérification de l'exercice, dans l'ordre (1 = réussie, 0 = ratée).
    */
   function chiffrer(clePublique, login) {
@@ -603,13 +603,14 @@
       if (!window.crypto || !crypto.subtle) { dire("L'envoi n'est pas possible dans ce navigateur.", false); return; }
       if (current) state.code[current.id] = editor.getValue();
       var envoi = {
-        serie: SERIE.id, titre: SERIE.titre, eleve: null, login_chiffre: null,
+        serie: SERIE.id, titre: SERIE.titre,
         date: new Date().toISOString(), python: reglages.python || "pyodide", exercices: []
       };
       b.disabled = true;
       exclusive(function () {
-        var suite = pseudonyme(reglages.sel, login).then(function (p) { envoi.eleve = p; });
-        if (reglages.cle) suite = suite.then(function () { return chiffrer(reglages.cle, login); }).then(function (c) { envoi.login_chiffre = c; });
+        var suite = reglages.cle
+          ? chiffrer(reglages.cle, login).then(function (c) { envoi.login_chiffre = c; })
+          : pseudonyme(reglages.sel, login).then(function (p) { envoi.eleve = p; });
         graded.forEach(function (ex, i) {
           suite = suite.then(function () {
             dire("Vérification des exercices… (" + (i + 1) + " sur " + graded.length + ")");
