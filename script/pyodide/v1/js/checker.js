@@ -290,6 +290,9 @@
     return (c.kind === "shape" && c.target === "<program>") || c.kind === "colors" || c.kind === "output";
   }
 
+  /* Clé d'un appel testé par une règle « call » : "call|moyenne|[12,15,9]" */
+  function callKey(c, k) { return "call|" + c.name + "|" + JSON.stringify(k.args || []); }
+
   /* Dessins de référence, obtenus en exécutant la (ou les) solution(s). */
   function getReferences(ex) {
     if (refCache[ex.id]) return Promise.resolve(refCache[ex.id]);
@@ -297,6 +300,14 @@
     var refs = {};
     var progInputs = {}; // réponses distinctes utilisées par les règles « programme entier »
     targets.forEach(function (c) { refs[targetKey(c)] = []; });
+    var appels = []; // règles « call » : un appel par jeu de valeurs
+    (ex.checks || []).forEach(function (c) {
+      if (c.kind !== "call") return;
+      (c.cases || [{ args: c.args }]).forEach(function (k) {
+        var cle = callKey(c, k);
+        if (!refs[cle]) { refs[cle] = []; appels.push({ name: c.name, args: k.args || [], cle: cle }); }
+      });
+    });
     (ex.checks || []).forEach(function (c) {
       if (!isProgramCheck(c)) return;
       var liste = c.kind === "output" ? [inputsOf(c, ex)] : casesOf(c, ex);
@@ -319,6 +330,15 @@
               return global.PyEngine.callFunction(r.module, t, tc.args).then(function (c) {
                 if (c.error) throw new Error("Solution de référence invalide (" + ex.id + "/" + key + ") : " + c.error.raw);
                 refs[key].push(global.TurtleRec.segments());
+              });
+            });
+          });
+          // Commandes testées par les règles « call » : valeur renvoyée et texte affiché
+          appels.forEach(function (a) {
+            inner = inner.then(function () {
+              return global.PyEngine.callFunction(r.module, a.name, a.args).then(function (x) {
+                if (x.error) throw new Error("Solution de référence invalide (" + ex.id + "/" + a.cle + ") : " + x.error.raw);
+                refs[a.cle].push({ retour: x.retour, printed: x.printed || "" });
               });
             });
           });
@@ -350,6 +370,35 @@
     return debut + (parts.length > 1 ? " couleur du trait et celle du remplissage ne sont pas les bonnes."
       : " couleur " + (parts[0] || "") + " n'est pas la bonne.") + (c.fail ? " " + c.fail : "");
   }
+
+  /* Règle « call » : écriture Python des valeurs d'un appel, ex. moyenne(12, 15, "a", [1, 2]) */
+  function enPython(v) {
+    if (v === null || v === undefined) return "None";
+    if (v === true) return "True";
+    if (v === false) return "False";
+    if (typeof v === "string") return v.indexOf("'") < 0 ? "'" + v + "'" : JSON.stringify(v);
+    if (Array.isArray(v)) return "[" + v.map(enPython).join(", ") + "]";
+    return String(v);
+  }
+  function appelTexte(c, k) { return c.name + "(" + (k.args || []).map(enPython).join(", ") + ")"; }
+  /* Même valeur renvoyée ? Nombres : à 1e-9 près (4 et 4.0 sont égaux) ; sinon même écriture Python */
+  function memeRetour(a, b) {
+    if (!a || !b) return false;
+    if (a.nombre != null && b.nombre != null) return Math.abs(a.nombre - b.nombre) <= 1e-9 * Math.max(1, Math.abs(a.nombre), Math.abs(b.nombre));
+    return a.repr === b.repr;
+  }
+  /* returns (facultatif) : valeur imposée dans la règle, au lieu de celle de la solution */
+  function retourImpose(v) {
+    if (typeof v === "number") return { repr: String(v), nombre: v };
+    if (typeof v === "string") return { repr: "'" + v + "'", nombre: null, texte: v };
+    return { repr: enPython(v), nombre: null };
+  }
+  function memeTexteAffiche(a, b) {
+    function norm(t) { return String(t || "").replace(/\r\n?/g, "\n").split("\n").map(function (l) { return l.replace(/\s+$/, ""); }).join("\n").replace(/\n+$/, ""); }
+    return norm(a) === norm(b);
+  }
+  function court(t) { t = String(t); return t.length > 80 ? t.slice(0, 77) + "…" : t; }
+  function afficheTexte(t) { return court(String(t || "").replace(/\s+$/, "").replace(/\n/g, " ⏎ ")); }
 
   /* Dessin comparé aux dessins des solutions : réussi si l'un d'eux correspond */
   function compareRefs(segs, refList, opts) {
@@ -492,6 +541,65 @@
               });
               return suite.then(function () {
                 results.push({ id: c.id, label: c.label, ok: !echec, message: echec });
+              });
+            }
+            if (c.kind === "call") {
+              // commande appelée avec des valeurs : valeur renvoyée et texte affiché, comparés à la solution
+              if (badParams[c.name]) {
+                results.push({ id: c.id, label: c.label, ok: false,
+                  message: "Impossible de tester tant que " + c.name + "() n'a pas le bon nombre de paramètres." });
+                return;
+              }
+              if (!E.getFunction(run.module, c.name)) {
+                results.push({ id: c.id, label: c.label, ok: false,
+                  message: "La commande " + c.name + "() n'est pas définie. Vérifiez son nom : def " + c.name + "(…):" });
+                return;
+              }
+              var echecA = null, suiteA = Promise.resolve();
+              (c.cases || [{ args: c.args, returns: c.returns }]).forEach(function (k) {
+                suiteA = suiteA.then(function () {
+                  if (echecA) return;
+                  return E.callFunction(run.module, c.name, k.args || []).then(function (x) {
+                    var appel = appelTexte(c, k);
+                    if (x.error) { echecA = appel + " provoque une erreur : " + x.error.message; return; }
+                    var sols = refs[callKey(c, k)] || [];
+                    var voirRetour = c.retour !== false, voirAffichage = c.affichage !== false;
+                    function retourOk(s) {
+                      if (!voirRetour) return true;
+                      if (k.hasOwnProperty("returns")) {
+                        var imp = retourImpose(k.returns);
+                        return imp.texte != null ? !!x.retour && (x.retour.repr === "'" + imp.texte + "'" || x.retour.repr === JSON.stringify(imp.texte)) : memeRetour(x.retour, imp);
+                      }
+                      // la solution ne renvoie rien (elle affiche) : seul l'affichage compte
+                      if (!s.retour || s.retour.repr === "None") return true;
+                      return memeRetour(x.retour, s.retour);
+                    }
+                    // l'affichage n'est comparé que si la solution affiche quelque chose (un print de contrôle en plus est accepté)
+                    function affichageOk(s) { return !voirAffichage || !String(s.printed || "").trim() || memeTexteAffiche(x.printed, s.printed); }
+                    if (!sols.length && k.hasOwnProperty("returns")) sols = [{ retour: null, printed: "" }];
+                    if (sols.some(function (s) { return retourOk(s) && affichageOk(s); })) return;
+                    var s0 = sols[0] || { retour: null, printed: "" };
+                    if (!retourOk(s0)) {
+                      var attendu = k.hasOwnProperty("returns") ? enPython(k.returns) : (s0.retour ? s0.retour.repr : "?");
+                      var obtenu = x.retour ? x.retour.repr : "None";
+                      if (obtenu === "None" && attendu !== "None") {
+                        echecA = appel + " ne renvoie rien : il manque return" +
+                          (String(x.printed || "").trim() ? " (print() affiche une valeur, mais ne la renvoie pas)." : ".");
+                      } else {
+                        echecA = appel + " renvoie " + court(obtenu) + " au lieu de " + court(attendu) + ".";
+                      }
+                    } else {
+                      echecA = String(x.printed || "").trim()
+                        ? appel + " affiche « " + afficheTexte(x.printed) + " » au lieu de « " + afficheTexte(s0.printed) + " »."
+                        : appel + " n'affiche rien ; il doit afficher « " + afficheTexte(s0.printed) + " »" +
+                          (x.retour && x.retour.repr !== "None" ? " avec print() (return renvoie la valeur sans l'afficher)." : ".");
+                    }
+                  });
+                });
+              });
+              return suiteA.then(function () {
+                if (echecA && c.fail) echecA += " " + c.fail;
+                results.push({ id: c.id, label: c.label, ok: !echecA, message: echecA });
               });
             }
             if (c.kind === "colors") {

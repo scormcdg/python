@@ -2,7 +2,8 @@
 #
 # _lancer(json) exécute un programme ou appelle une commande et renvoie un texte JSON :
 #   { "erreur": {type, msg, ligne} ou null, "trop": bool, "tortue": instantané ou null,
-#     "fonctions": [noms des commandes définies], "robi": événements et état final (jeu Robi) ou null }
+#     "fonctions": [noms des commandes définies], "robi": événements et état final (jeu Robi) ou null,
+#     "retour": {repr, nombre} (appel d'une commande : valeur renvoyée) }
 # Jeu Robi : si le job contient "robi": { monde, autorisees }, le programme joue sur ce terrain (py/robi.py).
 #
 # input() : sans réponses prévues, le programme est mis en pause (JSPI, run_sync de Pyodide)
@@ -130,6 +131,23 @@ def _decrire(e):
     return {"type": type(e).__name__, "msg": msg, "ligne": ligne}
 
 
+def _valeur(v):
+    """Valeur renvoyée par une commande : son écriture Python et, pour un nombre, sa valeur."""
+    try:
+        r = repr(v)
+    except Exception:
+        r = "<valeur>"
+    nombre = None
+    if isinstance(v, (int, float)) and not isinstance(v, bool):
+        try:
+            nombre = float(v)
+            if nombre != nombre or nombre in (float("inf"), float("-inf")):
+                nombre = None
+        except (OverflowError, ValueError):
+            nombre = None
+    return {"repr": r, "nombre": nombre}
+
+
 def _fonctions(ns):
     return [k for k, v in ns.items() if isinstance(v, types.FunctionType)]
 
@@ -168,7 +186,7 @@ def _lancer(texte):
             f = ns.get(job["name"]) if ns is not None else None
             if not callable(f):
                 raise NameError("name '" + str(job["name"]) + "' is not defined")
-            f(*job.get("args", []))
+            res["retour"] = _valeur(f(*job.get("args", [])))
     except _TropDeQuestions:
         res["trop"] = True
     except SystemExit:

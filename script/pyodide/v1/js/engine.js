@@ -429,25 +429,28 @@
     }
   }
 
-  /* Appelle une commande définie par l'élève ; args (facultatif) : valeurs JS (nombres, textes). Tortue remise à zéro. */
+  /*
+   * Appelle une commande définie par l'élève ; args (facultatif) : valeurs JS (nombres, textes, listes). Tortue remise à zéro.
+   * Résout { error, printed (ce qu'affiche print() pendant l'appel), retour: { repr, nombre } (valeur renvoyée) }.
+   */
   function callFunction(mod, name, args) {
     if (global.TurtleRec) global.TurtleRec.reset(); // la tortue est facultative
     if (!mod) {
       return Promise.resolve({ error: translateError(erreurPython({ type: "NameError", msg: "name '" + name + "' is not defined" })) });
     }
-    var output = "";
+    var output = "", printed = "";
     var inputs = dernieresReponses;
     var job = { type: "call", module: mod.id, name: name, args: args || [], inputs: inputs ? inputs.map(String) : null };
     return lancer(job, {
-      out: function (t) { output += t; },
+      out: function (t, e) { output += t; if (!e) printed += t; },
       input: function (q) { return askInConsole(q, function (t) { output += t; }, function () { return output; }); }
     }).then(function (r) {
       var sp = erreurSpeciale(r);
       if (sp) return { error: sp };
       if (global.TurtleRec) global.TurtleRec.charger(r.tortue);
       if (r.trop) return { error: { line: null, raw: "TooManyInputs", message: "Le programme pose trop de questions avec input()." } };
-      if (r.erreur) return { error: avecOriginal(translateError(erreurPython(r.erreur)), r.erreur) };
-      return { error: null };
+      if (r.erreur) return { error: avecOriginal(translateError(erreurPython(r.erreur)), r.erreur), printed: printed };
+      return { error: null, printed: printed, retour: r.retour || null };
     });
   }
 

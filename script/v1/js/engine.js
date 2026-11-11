@@ -278,18 +278,36 @@
       });
   }
 
-  /* Appelle une commande (sans argument) définie par l'élève, tortue remise à zéro. */
-  /* Appelle une commande définie par l'élève ; args (facultatif) : valeurs JS (nombres, textes). */
+  /*
+   * Appelle une commande définie par l'élève ; args (facultatif) : valeurs JS (nombres, textes, listes). Tortue remise à zéro.
+   * Résout { error, printed (ce qu'affiche print() pendant l'appel), retour: { repr, nombre } (valeur renvoyée) }.
+   */
   function callFunction(mod, name, args) {
     var Sk = global.Sk;
     var fn = getFunction(mod, name);
     var pyArgs = (args || []).map(function (v) { return Sk.ffi.remapToPy(v); });
     if (global.TurtleRec) global.TurtleRec.reset(); // la tortue est facultative
+    var printed = "", sortie = Sk.output;
+    Sk.output = function (t) { printed += t; };
     Sk.execStart = Date.now();
     return Sk.misceval
       .asyncToPromise(function () { return Sk.misceval.callsimOrSuspendArray(fn, pyArgs); })
-      .then(function () { return { error: null }; })
-      .catch(function (err) { return { error: translateError(err) }; });
+      .then(function (v) { Sk.output = sortie; return { error: null, printed: printed, retour: valeurRenvoyee(v) }; })
+      .catch(function (err) { Sk.output = sortie; return { error: translateError(err), printed: printed }; });
+  }
+
+  /* Valeur renvoyée : son écriture Python (repr) et, pour un nombre, sa valeur (comparaison avec tolérance) */
+  function valeurRenvoyee(v) {
+    var Sk = global.Sk;
+    if (v === undefined || v === null) v = Sk.builtin.none.none$;
+    var repr;
+    try { repr = Sk.misceval.objectRepr(v); } catch (e) { repr = String(v); }
+    if (repr && repr.v !== undefined) repr = repr.v;
+    var nombre = null;
+    if ((v instanceof Sk.builtin.int_ || v instanceof Sk.builtin.float_) && !(v instanceof Sk.builtin.bool)) {
+      nombre = Number(Sk.ffi.remapToJs(v));
+    }
+    return { repr: String(repr), nombre: nombre };
   }
 
   function getFunction(mod, name) {
