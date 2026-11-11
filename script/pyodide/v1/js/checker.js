@@ -244,9 +244,18 @@
     return c.target + (c.args ? "(" + c.args.join(",") + ")" : "") + (c.inputs ? "|" + inputsKey(c.inputs) : "");
   }
 
+  /*
+   * Jeux de réponses d'une règle « programme entier » (dessin ou couleurs) :
+   * cases : [{ inputs }, …] teste plusieurs jeux (la règle réussit si tous réussissent) ; sinon un seul.
+   */
+  function casesOf(c, ex) {
+    return c.cases ? c.cases.map(function (k) { return k.inputs || ex.inputs || null; }) : [inputsOf(c, ex)];
+  }
+
+  /* Commandes dessinées seules (pas le programme entier, traité à part) */
   function shapeTargets(ex) {
     var t = {};
-    (ex.checks || []).forEach(function (c) { if (c.kind === "shape") t[targetKey(c)] = c; });
+    (ex.checks || []).forEach(function (c) { if (c.kind === "shape" && c.target !== "<program>") t[targetKey(c)] = c; });
     return Object.keys(t).map(function (k) { return t[k]; });
   }
 
@@ -289,8 +298,14 @@
     var progInputs = {}; // réponses distinctes utilisées par les règles « programme entier »
     targets.forEach(function (c) { refs[targetKey(c)] = []; });
     (ex.checks || []).forEach(function (c) {
-      if (c.kind === "colors") refs["colors|" + inputsKey(inputsOf(c, ex))] = [];
-      if (isProgramCheck(c)) progInputs[inputsKey(inputsOf(c, ex))] = inputsOf(c, ex);
+      if (!isProgramCheck(c)) return;
+      var liste = c.kind === "output" ? [inputsOf(c, ex)] : casesOf(c, ex);
+      liste.forEach(function (inp) {
+        var ik = inputsKey(inp);
+        progInputs[ik] = inp;
+        if (c.kind === "colors") refs["colors|" + ik] = [];
+        if (c.kind === "shape") refs["dessin|" + ik] = [];
+      });
     });
     var chain = Promise.resolve();
     (ex.solutions || []).forEach(function (sol) {
@@ -300,7 +315,6 @@
           var inner = Promise.resolve();
           targets.forEach(function (tc) {
             var t = tc.target, key = targetKey(tc);
-            if (t === "<program>") return;
             inner = inner.then(function () {
               return global.PyEngine.callFunction(r.module, t, tc.args).then(function (c) {
                 if (c.error) throw new Error("Solution de référence invalide (" + ex.id + "/" + key + ") : " + c.error.raw);
@@ -313,9 +327,7 @@
             inner = inner.then(function () {
               return runProgram(sol, progInputs[ik]).then(function (p) {
                 if (p.run.error) throw new Error("Solution de référence invalide (" + ex.id + ", réponses " + ik + ") : " + p.run.error.raw);
-                targets.forEach(function (tc) {
-                  if (tc.target === "<program>" && inputsKey(inputsOf(tc, ex)) === ik) refs[targetKey(tc)].push(p.segs);
-                });
+                if (refs["dessin|" + ik]) refs["dessin|" + ik].push(p.segs);
                 if (refs["colors|" + ik]) refs["colors|" + ik].push(p.colors);
               });
             });
@@ -339,11 +351,24 @@
       : " couleur " + (parts[0] || "") + " n'est pas la bonne.") + (c.fail ? " " + c.fail : "");
   }
 
-  function shapeMessage(check, res) {
+  /* Dessin comparé aux dessins des solutions : réussi si l'un d'eux correspond */
+  function compareRefs(segs, refList, opts) {
+    var res = null;
+    for (var i = 0; i < refList.length; i++) {
+      var r = compareDrawings(segs, refList[i], opts);
+      if (r.ok) return r;
+      if (!res) res = r; // on garde le diagnostic de la 1re référence
+    }
+    return res || { ok: false, reason: "shape" };
+  }
+
+  /* inputs : réponses utilisées pour ce dessin (affichées seulement si la règle en donne : c.inputs ou c.cases) */
+  function shapeMessage(check, res, inputs) {
+    var montrees = check.cases ? inputs : check.inputs;
     var appel = check.target + "(" + (check.args || []).join(", ") + ")";
-    var who = check.target === "<program>" ? "Le dessin de votre programme" + reponsesTexte(check.inputs) : "Le dessin de " + appel;
+    var who = check.target === "<program>" ? "Le dessin de votre programme" + reponsesTexte(montrees) : "Le dessin de " + appel;
     if (check.target === "<program>" && res.reason === "error") {
-      return "Le programme provoque une erreur" + reponsesTexte(check.inputs) + " : " + res.error.message;
+      return "Le programme provoque une erreur" + reponsesTexte(montrees) + " : " + res.error.message;
     }
     switch (res.reason) {
       case "empty":
@@ -470,18 +495,24 @@
               });
             }
             if (c.kind === "colors") {
-              // couleurs du trait et du remplissage, comparées à celles de la solution
-              var inC = inputsOf(c, ex);
-              return programWith(inC).then(function (p) {
-                if (p.run.error) {
-                  results.push({ id: c.id, label: c.label, ok: false,
-                    message: "Le programme provoque une erreur" + reponsesTexte(inC) + " : " + p.run.error.message });
-                  return;
-                }
-                var list = refs["colors|" + inputsKey(inC)] || [];
-                var okC = list.some(function (r) { return sameList(p.colors.pen, r.pen) && sameList(p.colors.fill, r.fill); });
-                results.push({ id: c.id, label: c.label, ok: okC,
-                  message: okC ? null : (list.length ? colorsMessage(c, inC, p.colors, list[0]) : c.fail) });
+              // couleurs du trait et du remplissage, comparées à celles de la solution (un ou plusieurs jeux de réponses)
+              var echecC = null, suiteC = Promise.resolve();
+              casesOf(c, ex).forEach(function (inC) {
+                suiteC = suiteC.then(function () {
+                  if (echecC) return;
+                  return programWith(inC).then(function (p) {
+                    if (p.run.error) {
+                      echecC = "Le programme provoque une erreur" + reponsesTexte(inC) + " : " + p.run.error.message;
+                      return;
+                    }
+                    var list = refs["colors|" + inputsKey(inC)] || [];
+                    var okC = list.some(function (r) { return sameList(p.colors.pen, r.pen) && sameList(p.colors.fill, r.fill); });
+                    if (!okC) echecC = list.length ? colorsMessage(c, inC, p.colors, list[0]) : c.fail;
+                  });
+                });
+              });
+              return suiteC.then(function () {
+                results.push({ id: c.id, label: c.label, ok: !echecC, message: echecC });
               });
             }
             if (c.kind === "shape") {
@@ -492,8 +523,21 @@
                 return;
               }
               if (c.target === "<program>") {
-                getSegs = programWith(inputsOf(c, ex)).then(function (p) {
-                  return p.run.error ? { error: p.run.error } : { segs: p.segs };
+                // programme entier : un ou plusieurs jeux de réponses (cases), arrêt au premier dessin faux
+                var echecD = null, suiteD = Promise.resolve();
+                casesOf(c, ex).forEach(function (inD) {
+                  suiteD = suiteD.then(function () {
+                    if (echecD) return;
+                    return programWith(inD).then(function (p) {
+                      var resD;
+                      if (p.run.error) resD = { ok: false, reason: "error", error: p.run.error };
+                      else resD = compareRefs(p.segs, refs["dessin|" + inputsKey(inD)] || [], c.opts);
+                      if (!resD.ok) echecD = shapeMessage(c, resD, inD) + hintFor(c, resD);
+                    });
+                  });
+                });
+                return suiteD.then(function () {
+                  results.push({ id: c.id, label: c.label, ok: !echecD, message: echecD });
                 });
               } else if (!E.getFunction(run.module, c.target)) {
                 getSegs = Promise.resolve({ missing: true });
@@ -506,15 +550,7 @@
                 var res;
                 if (g.missing) res = { ok: false, reason: "function-missing" };
                 else if (g.error) res = { ok: false, reason: "error", error: g.error };
-                else {
-                  res = null;
-                  var refList = refs[targetKey(c)] || [];
-                  for (var i = 0; i < refList.length; i++) {
-                    var r = compareDrawings(g.segs, refList[i], c.opts);
-                    if (r.ok) { res = r; break; }
-                    if (!res) res = r; // on garde le diagnostic de la 1re référence
-                  }
-                }
+                else res = compareRefs(g.segs, refs[targetKey(c)] || [], c.opts);
                 results.push({ id: c.id, label: c.label, ok: res.ok,
                   message: res.ok ? null : shapeMessage(c, res) + hintFor(c, res) });
               });
