@@ -82,6 +82,11 @@
 
     connected: function () { return !!api; },
 
+    /* Élève connecté dans Moodle : { id, nom } (vides hors Moodle) */
+    learner: function () {
+      return { id: get("cmi.learner_id") || "", nom: get("cmi.learner_name") || "" };
+    },
+
     /* Sauvegarde l'état (code des élèves, exercices validés…). */
     save: function (state, location) {
       var json = JSON.stringify(state);

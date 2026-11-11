@@ -531,3 +531,7 @@ body.bac-a-sable.sans-tortue .console { max-height: none; height: var(--hauteur-
 .fenetre p { margin: 0 0 8px; }
 .fenetre table { border-collapse: collapse; margin: 6px 0 10px; font-size: 0.92rem; }
 .fenetre td, .fenetre th { border: 1px solid var(--bordure); padding: 4px 8px; text-align: left; vertical-align: top; }
+
+/* « Envoyer mes résultats » (séries avec Neon) */
+#btn-envoyer { padding: 4px 12px; font-size: 0.9rem; }
+.envoi-message { font-size: 0.85rem; }

@@ -541,6 +541,72 @@
     });
   }
 
+  /*
+   * « Envoyer mes résultats » (si serie.js donne une adresse Neon) : vérifie à nouveau chaque exercice noté
+   * avec le code actuel de l'élève, puis enregistre un JSON dans la table « reponses » de Neon :
+   * { serie, titre, moodle_id, eleve, date, python, exercices: [{ id, titre, code, tests: [1, 0, …] }] }
+   * tests : une valeur par vérification de l'exercice, dans l'ordre (1 = réussie, 0 = ratée).
+   */
+  function boutonEnvoyer(reglages) {
+    var b = document.createElement("button");
+    b.type = "button";
+    b.id = "btn-envoyer";
+    b.className = "bouton secondaire";
+    b.textContent = "Envoyer mes résultats";
+    var msg = document.createElement("span");
+    msg.className = "envoi-message";
+    msg.setAttribute("role", "status");
+    var p = $("progression");
+    p.parentNode.insertBefore(b, p.nextSibling);
+    p.parentNode.insertBefore(msg, b.nextSibling);
+    function dire(t, ok) { msg.textContent = t; msg.style.color = ok === false ? "#b3261e" : ok ? "#1e7a3c" : ""; }
+
+    b.addEventListener("click", function () {
+      if (busy || b.disabled) return;
+      var eleve = Scorm.learner();
+      if (!eleve.id && !eleve.nom) {
+        // hors Moodle (test du paquet)
+        eleve.nom = (window.prompt("Votre nom :") || "").trim();
+        if (!eleve.nom) return;
+      }
+      if (current) state.code[current.id] = editor.getValue();
+      var envoi = {
+        serie: SERIE.id, titre: SERIE.titre, moodle_id: eleve.id || null, eleve: eleve.nom || null,
+        date: new Date().toISOString(), python: reglages.python || "pyodide", exercices: []
+      };
+      b.disabled = true;
+      exclusive(function () {
+        var suite = Promise.resolve();
+        graded.forEach(function (ex, i) {
+          suite = suite.then(function () {
+            dire("Vérification des exercices… (" + (i + 1) + " sur " + graded.length + ")");
+            var code = state.code[ex.id] != null ? state.code[ex.id] : ex.code;
+            return Checker.checkExercise(ex, code).then(function (r) {
+              var parId = {};
+              (r.results || []).forEach(function (x) { parId[x.id] = x.ok; });
+              envoi.exercices.push({ id: ex.id, titre: ex.titre, code: code,
+                tests: (ex.checks || []).map(function (c) { return parId[c.id] ? 1 : 0; }) });
+            }, function () {
+              envoi.exercices.push({ id: ex.id, titre: ex.titre, code: code, tests: (ex.checks || []).map(function () { return 0; }) });
+            });
+          });
+        });
+        return suite.then(function () {
+          dire("Envoi…");
+          return import("https://esm.sh/@neondatabase/serverless@1").then(function (m) {
+            return m.neon(reglages.neon).query("INSERT INTO reponses (data) VALUES ($1::jsonb)", [JSON.stringify(envoi)]);
+          });
+        }).then(function () {
+          var t = new Date();
+          dire("Résultats envoyés à " + t.getHours() + "h" + (t.getMinutes() < 10 ? "0" : "") + t.getMinutes() + " ✓", true);
+        }, function (e) {
+          console.error(e);
+          dire("L'envoi n'a pas marché (" + (e && e.message || e) + "). Vérifiez la connexion et réessayez.", false);
+        });
+      }).then(function () { b.disabled = false; });
+    });
+  }
+
   function resetCode() {
     if (busy) return;
     if (!window.confirm("Remplacer votre programme par le code de départ ? Votre travail sur cet exercice sera effacé.")) return;
@@ -684,6 +750,8 @@
     });
 
     if (SERIE.fichiers) boutonsFichiers();
+    var reglages = window.SERIE_REGLAGES || {};
+    if (reglages.neon && graded.length) boutonEnvoyer(reglages);
     if (SERIE.exercices.length === 1) $("onglets").hidden = true;
 
     updateResult();
