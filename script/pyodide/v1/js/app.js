@@ -557,17 +557,29 @@
    * « Envoyer mes résultats » (si serie.js donne une adresse Neon) : vérifie à nouveau chaque exercice noté
    * avec le code actuel de l'élève, puis enregistre un JSON dans la table de Neon donnée par serie.js (table, « reponses » sinon),
    * colonne data (jsonb) :
-   * { serie, titre, login_chiffre, date, python, exercices: [{ id, titre, code, tests: [1, 0, …] }] }
-   * login_chiffre : login Moodle chiffré (RSA-OAEP, SHA-256, base64) avec la clé publique de serie.js (cle) ;
+   * { serie, titre, eleve_chiffre, date, python, exercices: [{ id, titre, code, tests: [1, 0, …] }] }
+   * eleve_chiffre : {"login": login Moodle, "nom": "Nom, Prénom"} (JSON) chiffré (RSA-OAEP, SHA-256, base64)
+   *         avec la clé publique de serie.js (cle) ;
    *         seul le viewer des résultats, qui a la clé privée, peut le déchiffrer. Le chiffrement ajoute du hasard :
    *         le même login donne un texte différent à chaque envoi (on ne peut pas retrouver un élève en chiffrant son login).
    * Sans clé dans serie.js (ancien réglage) : eleve = pseudonyme, SHA-256 de sel + login (16 caractères).
    * tests : une valeur par vérification de l'exercice, dans l'ordre (1 = réussie, 0 = ratée).
    */
-  function chiffrer(clePublique, login) {
+  /* RSA-OAEP 2048 bits avec SHA-256 chiffre au plus 190 octets : un nom trop long est raccourci */
+  function identite(login, nom) {
+    var enc = new TextEncoder(), n = String(nom || ""), t;
+    do {
+      t = enc.encode(JSON.stringify({ login: String(login), nom: n }));
+      if (t.length <= 190) return t;
+      n = n.slice(0, -1);
+    } while (n.length);
+    return enc.encode(JSON.stringify({ login: String(login).slice(0, 150), nom: "" }));
+  }
+
+  function chiffrer(clePublique, login, nom) {
     var der = Uint8Array.from(atob(clePublique), function (c) { return c.charCodeAt(0); });
     return crypto.subtle.importKey("spki", der, { name: "RSA-OAEP", hash: "SHA-256" }, false, ["encrypt"]).then(function (k) {
-      return crypto.subtle.encrypt({ name: "RSA-OAEP" }, k, new TextEncoder().encode(String(login)));
+      return crypto.subtle.encrypt({ name: "RSA-OAEP" }, k, identite(login, nom));
     }).then(function (c) {
       return btoa(String.fromCharCode.apply(null, new Uint8Array(c)));
     });
@@ -595,11 +607,12 @@
 
     b.addEventListener("click", function () {
       if (busy || b.disabled) return;
-      var login = Scorm.learner().id;
+      var moodle = Scorm.learner(), login = moodle.id, nom = moodle.nom;
       if (!login) {
         // hors Moodle (test du paquet)
         login = (window.prompt("Votre nom :") || "").trim();
         if (!login) return;
+        nom = login;
       }
       if (!window.crypto || !crypto.subtle) { dire("L'envoi n'est pas possible dans ce navigateur.", false); return; }
       var table = reglages.table || "reponses";
@@ -612,7 +625,7 @@
       b.disabled = true;
       exclusive(function () {
         var suite = reglages.cle
-          ? chiffrer(reglages.cle, login).then(function (c) { envoi.login_chiffre = c; })
+          ? chiffrer(reglages.cle, login, nom).then(function (c) { envoi.eleve_chiffre = c; })
           : pseudonyme(reglages.sel, login).then(function (p) { envoi.eleve = p; });
         graded.forEach(function (ex, i) {
           suite = suite.then(function () {
