@@ -556,11 +556,22 @@
   /*
    * « Envoyer mes résultats » (si serie.js donne une adresse Neon) : vérifie à nouveau chaque exercice noté
    * avec le code actuel de l'élève, puis enregistre un JSON dans la table « reponses » de Neon :
-   * { serie, titre, eleve, date, python, exercices: [{ id, titre, code, tests: [1, 0, …] }] }
+   * { serie, titre, eleve, login_chiffre, date, python, exercices: [{ id, titre, code, tests: [1, 0, …] }] }
    * eleve : pseudonyme = 16 premiers caractères (hexadécimal) du SHA-256 de sel + login Moodle (sel : serie.js).
-   *         Le même élève a le même pseudonyme dans toutes les séries qui ont le même sel ; ni nom ni login ne sont envoyés.
+   *         Le même élève a le même pseudonyme dans toutes les séries qui ont le même sel ; ni nom ni login en clair.
+   * login_chiffre : login Moodle chiffré (RSA-OAEP, SHA-256, base64) avec la clé publique de serie.js (cle) ;
+   *         seul le viewer des résultats, qui a la clé privée, peut le déchiffrer.
    * tests : une valeur par vérification de l'exercice, dans l'ordre (1 = réussie, 0 = ratée).
    */
+  function chiffrer(clePublique, login) {
+    var der = Uint8Array.from(atob(clePublique), function (c) { return c.charCodeAt(0); });
+    return crypto.subtle.importKey("spki", der, { name: "RSA-OAEP", hash: "SHA-256" }, false, ["encrypt"]).then(function (k) {
+      return crypto.subtle.encrypt({ name: "RSA-OAEP" }, k, new TextEncoder().encode(String(login)));
+    }).then(function (c) {
+      return btoa(String.fromCharCode.apply(null, new Uint8Array(c)));
+    });
+  }
+
   function pseudonyme(sel, login) {
     var octets = new TextEncoder().encode(String(sel || "") + String(login));
     return crypto.subtle.digest("SHA-256", octets).then(function (h) {
@@ -592,12 +603,13 @@
       if (!window.crypto || !crypto.subtle) { dire("L'envoi n'est pas possible dans ce navigateur.", false); return; }
       if (current) state.code[current.id] = editor.getValue();
       var envoi = {
-        serie: SERIE.id, titre: SERIE.titre, eleve: null,
+        serie: SERIE.id, titre: SERIE.titre, eleve: null, login_chiffre: null,
         date: new Date().toISOString(), python: reglages.python || "pyodide", exercices: []
       };
       b.disabled = true;
       exclusive(function () {
         var suite = pseudonyme(reglages.sel, login).then(function (p) { envoi.eleve = p; });
+        if (reglages.cle) suite = suite.then(function () { return chiffrer(reglages.cle, login); }).then(function (c) { envoi.login_chiffre = c; });
         graded.forEach(function (ex, i) {
           suite = suite.then(function () {
             dire("Vérification des exercices… (" + (i + 1) + " sur " + graded.length + ")");
