@@ -43,7 +43,7 @@ footer { margin-top: 48px; color: var(--doux); font-size: 0.9rem; }
 <main>
 <h1>Créer une nouvelle série SCORM</h1>
 <p class="sous-titre">Faire une nouvelle série d'exercices Python à partir d'un zip de série existant, sans rien changer sur GitHub : on change seulement <code>serie.js</code> et le fichier d'exercices.</p>
-<nav class="sommaire"><strong>Sommaire</strong><ol><li><a href="#le-principe">Le principe</a></li><li><a href="#serie-js">Les réglages : serie.js</a></li><li><a href="#etapes">Étapes</a></li><li><a href="#le-fichier-dexercices">Le fichier d'exercices</a></li><li><a href="#les-verifications">Les vérifications</a></li><li><a href="#pieges-frequents">Pièges fréquents</a></li></ol></nav>
+<nav class="sommaire"><strong>Sommaire</strong><ol><li><a href="#le-principe">Le principe</a></li><li><a href="#serie-js">Les réglages : serie.js</a></li><li><a href="#etapes">Étapes</a></li><li><a href="#le-fichier-dexercices">Le fichier d'exercices</a></li><li><a href="#les-verifications">Les vérifications</a></li><li><a href="#exemples-complets">Exemples complets</a></li><li><a href="#pieges-frequents">Pièges fréquents</a></li></ol></nav>
 <h2 id="le-principe">Le principe</h2>
 <p>Un zip de série ne contient que 5 fichiers. Tout le reste (moteur Python, tortue, éditeur, vérification, envoi des résultats, styles) est chargé depuis GitHub : <code>https://scormcdg.github.io/python/script/pyodide/v1/</code> (Pyodide, le vrai Python, par défaut) ou <code>https://scormcdg.github.io/python/script/v1/</code> (Skulpt, l'ancienne version, si <code>serie.js</code> le demande).</p>
 <table>
@@ -163,7 +163,7 @@ footer { margin-top: 48px; color: var(--doux); font-size: 0.9rem; }
 </tr>
 <tr>
 <td><code>code</code></td>
-<td>le code de départ dans l'éditeur ; les retours à la ligne s'écrivent <code>\n</code></td>
+<td>le code de départ dans l'éditeur, entre accents graves <code>`…`</code> (voir les exemples) ou entre guillemets avec <code>\n</code> pour les retours à la ligne</td>
 </tr>
 <tr>
 <td><code>solutions</code></td>
@@ -180,33 +180,7 @@ footer { margin-top: 48px; color: var(--doux); font-size: 0.9rem; }
 </tbody>
 </table>
 <p>En haut du fichier, deux aides servent dans les énoncés. <code>CODE("…")</code> affiche un bout de code sur ses propres lignes, et <code>OPTS</code> accepte un dessin tourné ou retourné comme celui de la solution.</p>
-<p>Exemple complet d'un exercice noté, à copier puis adapter :</p>
-<div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nx">id</span><span class="o">:</span><span class="w"> </span><span class="s2">"ex1"</span><span class="p">,</span>
-<span class="w">  </span><span class="nx">titre</span><span class="o">:</span><span class="w"> </span><span class="s2">"Exercice 1"</span><span class="p">,</span>
-<span class="w">  </span><span class="nx">note</span><span class="o">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
-<span class="w">  </span><span class="nx">figure</span><span class="o">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
-<span class="w">  </span><span class="nx">enonce</span><span class="o">:</span>
-<span class="w">    </span><span class="s2">"&lt;p&gt;Écrivez une commande &lt;code&gt;carre(cote)&lt;/code&gt; qui dessine un carré, "</span><span class="w"> </span><span class="o">+</span>
-<span class="w">    </span><span class="s2">"puis dessinez un carré de côté 100.&lt;/p&gt;"</span><span class="w"> </span><span class="o">+</span>
-<span class="w">    </span><span class="nx">CODE</span><span class="p">(</span><span class="s2">"carre(100)"</span><span class="p">),</span>
-<span class="w">  </span><span class="nx">code</span><span class="o">:</span><span class="w"> </span><span class="s2">"from turtle import *\n\n\n\ndone()\n"</span><span class="p">,</span>
-<span class="w">  </span><span class="nx">solutions</span><span class="o">:</span><span class="w"> </span><span class="p">[</span>
-<span class="w">    </span><span class="s2">"from turtle import *\n\ndef carre(cote):\n    for i in range(4):\n        forward(cote)\n        left(90)\n\ncarre(100)\n"</span>
-<span class="w">  </span><span class="p">],</span>
-<span class="w">  </span><span class="nx">checks</span><span class="o">:</span><span class="w"> </span><span class="p">[</span>
-<span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="nx">id</span><span class="o">:</span><span class="w"> </span><span class="s2">"def"</span><span class="p">,</span><span class="w"> </span><span class="nx">kind</span><span class="o">:</span><span class="w"> </span><span class="s2">"params"</span><span class="p">,</span><span class="w"> </span><span class="nx">name</span><span class="o">:</span><span class="w"> </span><span class="s2">"carre"</span><span class="p">,</span><span class="w"> </span><span class="nx">count</span><span class="o">:</span><span class="w"> </span><span class="mf">1</span><span class="p">,</span><span class="w"> </span><span class="nx">example</span><span class="o">:</span><span class="w"> </span><span class="s2">"def carre(cote):"</span><span class="p">,</span>
-<span class="w">      </span><span class="nx">label</span><span class="o">:</span><span class="w"> </span><span class="s2">"La commande carre(cote) existe"</span><span class="w"> </span><span class="p">},</span>
-<span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="nx">id</span><span class="o">:</span><span class="w"> </span><span class="s2">"for"</span><span class="p">,</span><span class="w"> </span><span class="nx">kind</span><span class="o">:</span><span class="w"> </span><span class="s2">"source"</span><span class="p">,</span><span class="w"> </span><span class="nx">re</span><span class="o">:</span><span class="w"> </span><span class="s2">"\\bfor\\b"</span><span class="p">,</span>
-<span class="w">      </span><span class="nx">label</span><span class="o">:</span><span class="w"> </span><span class="s2">"Le programme utilise une boucle for"</span><span class="p">,</span>
-<span class="w">      </span><span class="nx">fail</span><span class="o">:</span><span class="w"> </span><span class="s2">"Utilisez une boucle for pour répéter les 4 côtés."</span><span class="w"> </span><span class="p">},</span>
-<span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="nx">id</span><span class="o">:</span><span class="w"> </span><span class="s2">"carre50"</span><span class="p">,</span><span class="w"> </span><span class="nx">kind</span><span class="o">:</span><span class="w"> </span><span class="s2">"shape"</span><span class="p">,</span><span class="w"> </span><span class="nx">target</span><span class="o">:</span><span class="w"> </span><span class="s2">"carre"</span><span class="p">,</span><span class="w"> </span><span class="nx">args</span><span class="o">:</span><span class="w"> </span><span class="p">[</span><span class="mf">50</span><span class="p">],</span><span class="w"> </span><span class="nx">opts</span><span class="o">:</span><span class="w"> </span><span class="nx">OPTS</span><span class="p">,</span>
-<span class="w">      </span><span class="nx">label</span><span class="o">:</span><span class="w"> </span><span class="s2">"carre(50) dessine un carré de côté 50"</span><span class="w"> </span><span class="p">},</span>
-<span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="nx">id</span><span class="o">:</span><span class="w"> </span><span class="s2">"dessin"</span><span class="p">,</span><span class="w"> </span><span class="nx">kind</span><span class="o">:</span><span class="w"> </span><span class="s2">"shape"</span><span class="p">,</span><span class="w"> </span><span class="nx">target</span><span class="o">:</span><span class="w"> </span><span class="s2">"&lt;program&gt;"</span><span class="p">,</span><span class="w"> </span><span class="nx">opts</span><span class="o">:</span><span class="w"> </span><span class="nx">OPTS</span><span class="p">,</span>
-<span class="w">      </span><span class="nx">label</span><span class="o">:</span><span class="w"> </span><span class="s2">"Le programme dessine un carré de côté 100"</span><span class="w"> </span><span class="p">}</span>
-<span class="w">  </span><span class="p">]</span>
-<span class="p">},</span>
-</code></pre></div>
+<p>Des exercices complets, testés, sont dans la partie <a href="#exemples-complets">Exemples complets</a>.</p>
 <p>Chaque exercice est entre <code>{ }</code>, séparé du suivant par une virgule. Le plus simple est de copier un exercice existant de la série de départ et de le modifier.</p>
 <h2 id="les-verifications">Les vérifications</h2>
 <p>Chaque vérification de <code>checks</code> devient un critère dans la liste « Vérification » : son <code>label</code> est affiché en vert ou en rouge, et son message d'échec (<code>fail</code> ou message automatique) apparaît en dessous. Chaque vérification a un <code>id</code> unique dans l'exercice et un <code>kind</code> :</p>
@@ -271,40 +245,232 @@ footer { margin-top: 48px; color: var(--doux); font-size: 0.9rem; }
 <p><code>OPTS</code>, défini en haut du fichier, vaut <code>{ rotate: true, mirror: true }</code> : c'est le choix habituel.</p>
 <h3 id="les-indices-dun-dessin-hint">Les indices d'un dessin (<code>hint</code>)</h3>
 <p>Un texte s'ajoute au message quand le dessin ne correspond pas : <code>hint: "Un carré a 4 côtés."</code>. Pour un indice selon le problème : <code>hint: { count: "…", size: "…", shape: "…" }</code>. <code>count</code> sert s'il manque des traits ou s'il y en a trop, <code>size</code> si le dessin est trop grand ou trop petit, et <code>shape</code> si la forme est différente.</p>
-<h3 id="exemples">Exemples</h3>
-<div class="highlight"><pre><span></span><code><span class="c1">// le code contient une boucle while</span>
-<span class="p">{</span><span class="w"> </span><span class="nx">id</span><span class="o">:</span><span class="w"> </span><span class="s2">"while"</span><span class="p">,</span><span class="w"> </span><span class="nx">kind</span><span class="o">:</span><span class="w"> </span><span class="s2">"source"</span><span class="p">,</span><span class="w"> </span><span class="nx">re</span><span class="o">:</span><span class="w"> </span><span class="s2">"\\bwhile\\b"</span><span class="p">,</span><span class="w"> </span><span class="nx">label</span><span class="o">:</span><span class="w"> </span><span class="s2">"Le programme utilise while"</span><span class="p">,</span><span class="w"> </span><span class="nx">fail</span><span class="o">:</span><span class="w"> </span><span class="s2">"Utilisez une boucle while."</span><span class="w"> </span><span class="p">}</span>
-
-<span class="c1">// spirale(10, 50) dessine la bonne figure</span>
-<span class="p">{</span><span class="w"> </span><span class="nx">id</span><span class="o">:</span><span class="w"> </span><span class="s2">"s1"</span><span class="p">,</span><span class="w"> </span><span class="nx">kind</span><span class="o">:</span><span class="w"> </span><span class="s2">"shape"</span><span class="p">,</span><span class="w"> </span><span class="nx">target</span><span class="o">:</span><span class="w"> </span><span class="s2">"spirale"</span><span class="p">,</span><span class="w"> </span><span class="nx">args</span><span class="o">:</span><span class="w"> </span><span class="p">[</span><span class="mf">10</span><span class="p">,</span><span class="w"> </span><span class="mf">50</span><span class="p">],</span><span class="w"> </span><span class="nx">opts</span><span class="o">:</span><span class="w"> </span><span class="nx">OPTS</span><span class="p">,</span><span class="w"> </span><span class="nx">label</span><span class="o">:</span><span class="w"> </span><span class="s2">"spirale(10, 50) est juste"</span><span class="w"> </span><span class="p">}</span>
-
-<span class="c1">// le programme principal appelle carre()</span>
-<span class="p">{</span><span class="w"> </span><span class="nx">id</span><span class="o">:</span><span class="w"> </span><span class="s2">"appel"</span><span class="p">,</span><span class="w"> </span><span class="nx">kind</span><span class="o">:</span><span class="w"> </span><span class="s2">"calls"</span><span class="p">,</span><span class="w"> </span><span class="nx">caller</span><span class="o">:</span><span class="w"> </span><span class="s2">"&lt;main&gt;"</span><span class="p">,</span><span class="w"> </span><span class="nx">callee</span><span class="o">:</span><span class="w"> </span><span class="s2">"carre"</span><span class="p">,</span><span class="w"> </span><span class="nx">label</span><span class="o">:</span><span class="w"> </span><span class="s2">"Le programme appelle carre()"</span><span class="p">,</span><span class="w"> </span><span class="nx">fail</span><span class="o">:</span><span class="w"> </span><span class="s2">"Appelez votre commande, par exemple carre(100)."</span><span class="w"> </span><span class="p">}</span>
-
-<span class="c1">// avec input() : le dessin est testé avec deux jeux de réponses (un nombre écrit en dur ne passe pas)</span>
-<span class="p">{</span><span class="w"> </span><span class="nx">id</span><span class="o">:</span><span class="w"> </span><span class="s2">"dessin"</span><span class="p">,</span><span class="w"> </span><span class="nx">kind</span><span class="o">:</span><span class="w"> </span><span class="s2">"shape"</span><span class="p">,</span><span class="w"> </span><span class="nx">target</span><span class="o">:</span><span class="w"> </span><span class="s2">"&lt;program&gt;"</span><span class="p">,</span><span class="w"> </span><span class="nx">opts</span><span class="o">:</span><span class="w"> </span><span class="nx">OPTS</span><span class="p">,</span>
-<span class="w">  </span><span class="nx">cases</span><span class="o">:</span><span class="w"> </span><span class="p">[{</span><span class="w"> </span><span class="nx">inputs</span><span class="o">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"5"</span><span class="p">,</span><span class="w"> </span><span class="s2">"100"</span><span class="p">]</span><span class="w"> </span><span class="p">},</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">inputs</span><span class="o">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"8"</span><span class="p">,</span><span class="w"> </span><span class="s2">"60"</span><span class="p">]</span><span class="w"> </span><span class="p">}],</span>
-<span class="w">  </span><span class="nx">label</span><span class="o">:</span><span class="w"> </span><span class="s2">"Le polygone demandé (testé avec 5 côtés de 100 et 8 côtés de 60)"</span><span class="w"> </span><span class="p">}</span>
-
-<span class="c1">// les couleurs, testées avec deux jeux de réponses (une couleur écrite en dur ne passe pas)</span>
-<span class="p">{</span><span class="w"> </span><span class="nx">id</span><span class="o">:</span><span class="w"> </span><span class="s2">"couleur"</span><span class="p">,</span><span class="w"> </span><span class="nx">kind</span><span class="o">:</span><span class="w"> </span><span class="s2">"colors"</span><span class="p">,</span>
-<span class="w">  </span><span class="nx">cases</span><span class="o">:</span><span class="w"> </span><span class="p">[{</span><span class="w"> </span><span class="nx">inputs</span><span class="o">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"red"</span><span class="p">,</span><span class="w"> </span><span class="s2">"80"</span><span class="p">]</span><span class="w"> </span><span class="p">},</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">inputs</span><span class="o">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"blue"</span><span class="p">,</span><span class="w"> </span><span class="s2">"50"</span><span class="p">]</span><span class="w"> </span><span class="p">}],</span>
-<span class="w">  </span><span class="nx">label</span><span class="o">:</span><span class="w"> </span><span class="s2">"Le carré a la couleur demandée (testé avec red et blue)"</span><span class="p">,</span><span class="w"> </span><span class="nx">fail</span><span class="o">:</span><span class="w"> </span><span class="s2">"Utilisez la réponse dans color(couleur)."</span><span class="w"> </span><span class="p">}</span>
-
-<span class="c1">// l'affichage, testé avec deux jeux de réponses</span>
-<span class="p">{</span><span class="w"> </span><span class="nx">id</span><span class="o">:</span><span class="w"> </span><span class="s2">"msg"</span><span class="p">,</span><span class="w"> </span><span class="nx">kind</span><span class="o">:</span><span class="w"> </span><span class="s2">"output"</span><span class="p">,</span>
-<span class="w">  </span><span class="nx">cases</span><span class="o">:</span><span class="w"> </span><span class="p">[{</span><span class="w"> </span><span class="nx">inputs</span><span class="o">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"5"</span><span class="p">,</span><span class="w"> </span><span class="s2">"100"</span><span class="p">],</span><span class="w"> </span><span class="nx">re</span><span class="o">:</span><span class="w"> </span><span class="s2">"L'angle vaut : 72"</span><span class="p">,</span><span class="w"> </span><span class="nx">attendu</span><span class="o">:</span><span class="w"> </span><span class="s2">"L'angle vaut : 72.0"</span><span class="w"> </span><span class="p">},</span>
-<span class="w">          </span><span class="p">{</span><span class="w"> </span><span class="nx">inputs</span><span class="o">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"8"</span><span class="p">,</span><span class="w"> </span><span class="s2">"60"</span><span class="p">],</span><span class="w"> </span><span class="nx">re</span><span class="o">:</span><span class="w"> </span><span class="s2">"L'angle vaut : 45"</span><span class="p">,</span><span class="w"> </span><span class="nx">attendu</span><span class="o">:</span><span class="w"> </span><span class="s2">"L'angle vaut : 45.0"</span><span class="w"> </span><span class="p">}],</span>
-<span class="w">  </span><span class="nx">label</span><span class="o">:</span><span class="w"> </span><span class="s2">"Le programme affiche l'angle"</span><span class="p">,</span><span class="w"> </span><span class="nx">fail</span><span class="o">:</span><span class="w"> </span><span class="s2">"Utilisez print() avec l'angle calculé."</span><span class="w"> </span><span class="p">}</span>
-
-<span class="c1">// une commande avec paramètres : ce qu'elle renvoie, testé avec deux jeux de valeurs</span>
-<span class="p">{</span><span class="w"> </span><span class="nx">id</span><span class="o">:</span><span class="w"> </span><span class="s2">"moy"</span><span class="p">,</span><span class="w"> </span><span class="nx">kind</span><span class="o">:</span><span class="w"> </span><span class="s2">"call"</span><span class="p">,</span><span class="w"> </span><span class="nx">name</span><span class="o">:</span><span class="w"> </span><span class="s2">"moyenne"</span><span class="p">,</span>
-<span class="w">  </span><span class="nx">cases</span><span class="o">:</span><span class="w"> </span><span class="p">[{</span><span class="w"> </span><span class="nx">args</span><span class="o">:</span><span class="w"> </span><span class="p">[</span><span class="mf">12</span><span class="p">,</span><span class="w"> </span><span class="mf">15</span><span class="p">,</span><span class="w"> </span><span class="mf">9</span><span class="p">]</span><span class="w"> </span><span class="p">},</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">args</span><span class="o">:</span><span class="w"> </span><span class="p">[</span><span class="mf">10</span><span class="p">,</span><span class="w"> </span><span class="mf">15</span><span class="p">,</span><span class="w"> </span><span class="mf">12</span><span class="p">]</span><span class="w"> </span><span class="p">}],</span>
-<span class="w">  </span><span class="nx">label</span><span class="o">:</span><span class="w"> </span><span class="s2">"moyenne(a, b, c) renvoie la moyenne (testé avec 12, 15, 9 et 10, 15, 12)"</span><span class="w"> </span><span class="p">}</span>
-</code></pre></div>
 <p>Avec <code>input()</code>, testez chaque dessin et chaque couleur avec deux jeux de réponses dans une seule vérification (<code>cases</code>) : avec un seul jeu, l'élève peut écrire la valeur testée directement dans le code. Avec <code>cases</code>, une erreur ne fait rater qu'une vérification, et le message indique les réponses qui posent problème.</p>
 <p>Pour une commande avec paramètres, la règle <code>"call"</code> appelle la commande de l'élève et celle de la solution avec les mêmes valeurs, puis compare ce qu'elles renvoient et ce qu'elles affichent : il n'y a pas de résultat à écrire. Les nombres sont comparés à 0.000000001 près (<code>4</code> et <code>4.0</code> sont égaux). L'affichage n'est comparé que si la solution affiche quelque chose. Le message dit ce qui ne va pas, par exemple « moyenne(10, 15, 12) renvoie 12 au lieu de 12.333333333333334. » ou « moyenne(12, 15, 9) ne renvoie rien : il manque return (print() affiche une valeur, mais ne la renvoie pas). ». Mettez la règle <code>"params"</code> avant : si le nombre de paramètres est faux, la commande n'est pas appelée.</p>
 <p>Les vérifications sont faites dans l'ordre de la liste. Mettez d'abord les plus simples (la commande existe, la boucle est là), puis les dessins.</p>
+<h2 id="exemples-complets">Exemples complets</h2>
+<p>Quatre exercices complets, testés tels quels avec la vérification. Pour chacun : la solution en Python, l'exercice tel qu'il s'écrit dans le fichier d'exercices, et ce que voit un élève qui fait une erreur typique. Copiez l'exercice le plus proche du vôtre, puis adaptez-le.</p>
+<p>Dans ces exemples, le code de départ et les solutions sont écrits entre <strong>accents graves</strong> <code>`…`</code> : on écrit le Python tel quel, sur plusieurs lignes, avec son indentation. C'est plus lisible que <code>"…\n…"</code> (les anciennes séries) et ça marche pareil. Deux précautions entre accents graves : doubler les barres obliques inverses (<code>\\n</code> pour un <code>\n</code> dans le Python), et ne pas écrire <code>${</code>.</p>
+
+<h3 id="exemple-input">1. Questions avec <code>input()</code>, dessin, couleur et message</h3>
+<p>L'élève demande une couleur et une taille, dessine un carré rempli, puis affiche un message. Chaque vérification qui dépend des réponses est testée avec <strong>deux jeux de réponses</strong> (<code>cases</code>) : une valeur écrite en dur dans le code ne passe pas. <code>inputs</code> donne les réponses utilisées pour la « Figure attendue » et pour les vérifications sans <code>cases</code>.</p>
+<p><strong>Solution</strong></p>
+<div class="highlight"><pre><code>from turtle import *
+
+couleur = input("Couleur ? ")
+cote = int(input("Taille ? "))
+color(couleur)
+begin_fill()
+for i in range(4):
+    forward(cote)
+    left(90)
+end_fill()
+print("Carré", couleur, "de côté", cote)
+</code></pre></div>
+<p><strong>Dans le fichier d'exercices</strong></p>
+<div class="highlight"><pre><code>{
+  id: "ex2",
+  titre: "Exercice 2",
+  note: true,
+  figure: false,
+  inputs: ["red", "80"],
+  enonce:
+    "&lt;p&gt;Écrivez un programme qui demande une &lt;strong&gt;couleur&lt;/strong&gt; (en anglais), puis la &lt;strong&gt;taille&lt;/strong&gt; " +
+    "du côté d'un carré. La tortue dessine un &lt;strong&gt;carré rempli&lt;/strong&gt; de cette couleur, puis le programme " +
+    "affiche un message, par exemple :&lt;/p&gt;" +
+    CODE("Couleur ? red\nTaille ? 80\nCarré red de côté 80"),
+  code: `from turtle import *
+
+
+
+done()
+`,
+  solutions: [
+`from turtle import *
+
+couleur = input("Couleur ? ")
+cote = int(input("Taille ? "))
+color(couleur)
+begin_fill()
+for i in range(4):
+    forward(cote)
+    left(90)
+end_fill()
+print("Carré", couleur, "de côté", cote)
+`
+  ],
+  checks: [
+    { id: "input", kind: "source", re: "input\\s*\\([\\s\\S]*input\\s*\\(",
+      label: "Le programme pose deux questions avec input()",
+      fail: "Posez deux questions avec input() : d'abord la couleur, puis la taille." },
+    { id: "carre", kind: "shape", target: "&lt;program&gt;", opts: OPTS,
+      cases: [{ inputs: ["red", "80"] }, { inputs: ["blue", "50"] }],
+      label: "La tortue dessine un carré de la taille demandée (testé avec 80 et 50)",
+      hint: { size: "La taille doit venir de la deuxième réponse, transformée en nombre avec int().",
+              count: "Un carré a 4 côtés : for i in range(4):" } },
+    { id: "couleur", kind: "colors",
+      cases: [{ inputs: ["red", "80"] }, { inputs: ["blue", "50"] }],
+      label: "Le trait et le remplissage ont la couleur demandée (testé avec red et blue)",
+      fail: "Utilisez la réponse dans color(couleur), et remplissez le carré entre begin_fill() et end_fill()." },
+    { id: "message", kind: "output",
+      cases: [{ inputs: ["red", "80"], re: "Carré\\s+red\\s+de\\s+côté\\s+80", attendu: "Carré red de côté 80" },
+              { inputs: ["blue", "50"], re: "Carré\\s+blue\\s+de\\s+côté\\s+50", attendu: "Carré blue de côté 50" }],
+      label: "Le programme affiche « Carré … de côté … » (testé avec red, 80 et blue, 50)",
+      fail: "Utilisez print() avec la couleur et la taille données par l'utilisateur." }
+  ]
+},</code></pre></div>
+<p><strong>Ce que voit l'élève</strong></p>
+<table>
+<thead><tr><th>Erreur de l'élève</th><th>Critère en rouge et message</th></tr></thead>
+<tbody>
+<tr><td><code>color("red")</code> au lieu de <code>color(couleur)</code></td><td>« Le trait et le remplissage ont la couleur demandée » : <em>Avec les réponses blue, 50, la couleur du trait et celle du remplissage ne sont pas les bonnes. Utilisez la réponse dans color(couleur)…</em></td></tr>
+<tr><td><code>forward(80)</code> au lieu de <code>forward(cote)</code></td><td>« La tortue dessine un carré de la taille demandée » : <em>Le dessin de votre programme (réponses données : blue, 50) est trop grand : vérifiez les longueurs. La taille doit venir de la deuxième réponse…</em></td></tr>
+<tr><td><code>begin_fill()</code> et <code>end_fill()</code> oubliés</td><td>« Le trait et le remplissage… » : <em>Avec les réponses red, 80, la couleur du remplissage n'est pas la bonne…</em></td></tr>
+</tbody>
+</table>
+
+<h3 id="exemple-commande">2. Une commande avec paramètre qui dessine</h3>
+<p>L'élève écrit <code>carre(cote)</code> et l'utilise. On vérifie la commande seule, appelée avec une autre valeur que dans le programme (<code>target: "carre"</code>, <code>args: [30]</code>), puis le dessin de tout le programme. <code>figure: true</code> affiche la « Figure attendue », dessinée avec la solution.</p>
+<p><strong>Solution</strong></p>
+<div class="highlight"><pre><code>from turtle import *
+
+def carre(cote):
+    for i in range(4):
+        forward(cote)
+        left(90)
+
+carre(50)
+forward(60)
+carre(100)
+</code></pre></div>
+<p><strong>Dans le fichier d'exercices</strong></p>
+<div class="highlight"><pre><code>{
+  id: "ex3",
+  titre: "Exercice 3",
+  note: true,
+  figure: true,
+  enonce:
+    "&lt;p&gt;Écrivez une commande &lt;code&gt;carre(cote)&lt;/code&gt; qui dessine un carré de côté &lt;code&gt;cote&lt;/code&gt;. " +
+    "Utilisez-la pour dessiner deux carrés côte à côte, de côtés 50 et 100 :&lt;/p&gt;" +
+    CODE("carre(50)\nforward(60)\ncarre(100)"),
+  code: `from turtle import *
+
+def carre(cote):
+    pass
+
+
+done()
+`,
+  solutions: [
+`from turtle import *
+
+def carre(cote):
+    for i in range(4):
+        forward(cote)
+        left(90)
+
+carre(50)
+forward(60)
+carre(100)
+`
+  ],
+  checks: [
+    { id: "def", kind: "params", name: "carre", count: 1, example: "def carre(cote):",
+      label: "La commande carre(cote) existe, avec un paramètre" },
+    { id: "for", kind: "source", re: "\\bfor\\b", in: "carre",
+      label: "carre() utilise une boucle for",
+      fail: "Dans carre(), utilisez une boucle for pour répéter les 4 côtés." },
+    { id: "c30", kind: "shape", target: "carre", args: [30], opts: OPTS,
+      label: "carre(30) dessine un carré de côté 30",
+      hint: { size: "La longueur des côtés doit être le paramètre cote : forward(cote)." } },
+    { id: "appel", kind: "calls", caller: "&lt;main&gt;", callee: "carre",
+      label: "Le programme utilise la commande carre()",
+      fail: "Appelez votre commande, par exemple carre(50)." },
+    { id: "dessin", kind: "shape", target: "&lt;program&gt;", opts: OPTS,
+      label: "Le programme dessine les deux carrés" }
+  ]
+},</code></pre></div>
+<p><strong>Ce que voit l'élève</strong></p>
+<table>
+<thead><tr><th>Erreur de l'élève</th><th>Critère en rouge et message</th></tr></thead>
+<tbody>
+<tr><td><code>forward(100)</code> au lieu de <code>forward(cote)</code> dans <code>carre</code></td><td>« carre(30) dessine un carré de côté 30 » : <em>Le dessin de carre(30) est trop grand : vérifiez les longueurs. La longueur des côtés doit être le paramètre cote : forward(cote).</em></td></tr>
+<tr><td>quatre <code>forward</code> / <code>left</code> sans boucle</td><td>« carre() utilise une boucle for » : <em>Dans carre(), utilisez une boucle for pour répéter les 4 côtés.</em></td></tr>
+<tr><td>la commande est écrite mais jamais appelée</td><td>« Le programme utilise la commande carre() » : <em>Appelez votre commande, par exemple carre(50).</em></td></tr>
+</tbody>
+</table>
+
+<h3 id="exemple-fonction">3. Une fonction qui renvoie une valeur</h3>
+<p>Pas de tortue : la fonction <code>moyenne(a, b, c)</code> doit <strong>renvoyer</strong> un résultat. La vérification <code>"call"</code> appelle la fonction de l'élève et celle de la solution avec les mêmes valeurs et compare les résultats : aucune valeur attendue à écrire. Le jeu <code>10, 15, 12</code> (moyenne non entière) attrape la division entière <code>//</code>.</p>
+<p><strong>Solution</strong></p>
+<div class="highlight"><pre><code>def moyenne(a, b, c):
+    return (a + b + c) / 3
+
+
+print(moyenne(12, 15, 9))
+</code></pre></div>
+<p><strong>Dans le fichier d'exercices</strong></p>
+<div class="highlight"><pre><code>{
+  id: "ex4",
+  titre: "Exercice 4",
+  note: true,
+  figure: false,
+  enonce:
+    "&lt;p&gt;Écrivez une fonction &lt;code&gt;moyenne(a, b, c)&lt;/code&gt; qui &lt;strong&gt;renvoie&lt;/strong&gt; (avec &lt;code&gt;return&lt;/code&gt;) " +
+    "la moyenne des trois nombres. Par exemple, &lt;code&gt;moyenne(12, 15, 9)&lt;/code&gt; renvoie &lt;code&gt;12.0&lt;/code&gt;.&lt;/p&gt;" +
+    CODE("print(moyenne(12, 15, 9))"),
+  code: `def moyenne(a, b, c):
+    pass
+
+
+print(moyenne(12, 15, 9))
+`,
+  solutions: [
+`def moyenne(a, b, c):
+    return (a + b + c) / 3
+
+
+print(moyenne(12, 15, 9))
+`
+  ],
+  checks: [
+    { id: "def", kind: "params", name: "moyenne", count: 3, example: "def moyenne(a, b, c):",
+      label: "La fonction moyenne(a, b, c) existe, avec trois paramètres" },
+    { id: "return", kind: "source", re: "\\breturn\\b", in: "moyenne",
+      label: "moyenne() utilise return",
+      fail: "La fonction doit renvoyer le résultat avec return, pas seulement l'afficher." },
+    { id: "calcul", kind: "call", name: "moyenne",
+      cases: [{ args: [12, 15, 9] }, { args: [10, 15, 12] }, { args: [4, 4, 4] }],
+      label: "moyenne() renvoie la bonne valeur (testé avec 12, 15, 9 ; 10, 15, 12 et 4, 4, 4)" }
+  ]
+},</code></pre></div>
+<p><strong>Ce que voit l'élève</strong></p>
+<table>
+<thead><tr><th>Erreur de l'élève</th><th>Critère en rouge et message</th></tr></thead>
+<tbody>
+<tr><td><code>print(…)</code> au lieu de <code>return …</code></td><td>« moyenne() utilise return » et « moyenne() renvoie la bonne valeur » : <em>moyenne(12, 15, 9) ne renvoie rien : il manque return (print() affiche une valeur, mais ne la renvoie pas).</em></td></tr>
+<tr><td><code>// 3</code> au lieu de <code>/ 3</code></td><td>« moyenne() renvoie la bonne valeur » : <em>moyenne(10, 15, 12) renvoie 12 au lieu de 12.333333333333334.</em></td></tr>
+<tr><td><code>a + b + c / 3</code> (parenthèses oubliées)</td><td>« moyenne() renvoie la bonne valeur » : <em>moyenne(12, 15, 9) renvoie 30.0 au lieu de 12.0.</em></td></tr>
+</tbody>
+</table>
+
+<h3 id="exemple-non-note">4. Un exemple non noté</h3>
+<p>Le premier onglet d'une série montre souvent un exemple à exécuter. <code>note: false</code> : pas de bouton Vérifier, pas de solution ni de vérifications, et l'onglet ne compte pas dans « Exercices validés ».</p>
+<div class="highlight"><pre><code>{
+  id: "exemple",
+  titre: "Exemple",
+  note: false,
+  figure: false,
+  enonce:
+    "&lt;p&gt;Exécutez ce programme et observez : &lt;code&gt;input()&lt;/code&gt; pose une question, et la réponse est gardée " +
+    "dans une variable.&lt;/p&gt;",
+  code: `prenom = input("Comment vous appelez-vous ? ")
+print("Bonjour", prenom)
+`,
+  solutions: [],
+  checks: []
+},</code></pre></div>
+
 <h2 id="pieges-frequents">Pièges fréquents</h2>
 <table>
 <thead>
