@@ -7,7 +7,8 @@
  *   caisses[x]   nombre de caisses empilées sur la colonne x (elles bloquent le passage)
  *   panneaux[x]  valeur affichée par un panneau (nombre ou mot), lue avec lire_nombre() / lire_mot()
  * Robi part de la colonne depart, tourné vers la droite (dir = 1) ou la gauche (dir = -1).
- * But : prendre la clé (en passant dessus) puis ouvrir le coffre avec ouvrir().
+ * But : aller sur le coffre et l'ouvrir avec ouvrir().
+ * Clé (anciens paquets seulement) : si le terrain a une clé, Robi doit d'abord la prendre (en passant dessus).
  *
  * Version Pyodide : les commandes de Robi sont écrites en Python (py/robi.py), avec les mêmes règles
  * et les mêmes messages que la version Skulpt. Elles sont ajoutées aux fonctions de base de Python

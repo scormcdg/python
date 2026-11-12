@@ -19,7 +19,7 @@
     sauter: "sauter(n) : Robi monte sur la case suivante, qui doit être exactement n marches plus haut ; sauter() = sauter(1). Uniquement pour monter : sur du plat ou pour descendre, on utilise avancer()",
     demi_tour: "demi_tour() : Robi se retourne",
     frapper: "frapper() : Robi casse une caisse juste devant lui (on ne peut pas sauter par-dessus)",
-    ouvrir: "ouvrir() : Robi ouvre le coffre quand il est dessus : il faut d'abord aller sur la case du coffre (avec avancer(), il lui faut aussi la clé)",
+    ouvrir: "ouvrir() : Robi ouvre le coffre quand il est dessus : il faut d'abord aller sur la case du coffre (avec avancer())",
     lire_nombre: "lire_nombre() : donne le nombre écrit sur le panneau où se trouve Robi",
     lire_mot: "lire_mot() : donne le mot écrit sur le panneau où se trouve Robi",
     hauteur_devant: "hauteur_devant() : donne la hauteur de la marche devant Robi (0 si c'est plat, négatif si ça descend ; les caisses ne comptent pas)",
@@ -177,12 +177,18 @@
     });
   }
 
+  /* Clé : seulement dans les anciens paquets (les niveaux actuels n'en ont plus) */
+  function avecCle(monde) {
+    var o = (monde && monde.objets) || {};
+    return Object.keys(o).some(function (k) { return o[k] === "cle"; });
+  }
+
   function bilanPartie(r) {
     if (r.erreur) return { texte: r.erreur.message, classe: "erreur" };
     if (r.final.ouvert) return { texte: "Bravo, Robi a ouvert le coffre ! Cliquez sur « Vérifier » pour valider le niveau.", classe: "succes" };
     return {
       texte: "Le programme est terminé, mais le coffre n'est pas ouvert." +
-        (r.final.cle ? " Robi a pourtant la clé." : " Robi n'a pas encore pris la clé."),
+        (!avecCle(r.monde) ? "" : r.final.cle ? " Robi a pourtant la clé." : " Robi n'a pas encore pris la clé."),
       classe: "erreur"
     };
   }

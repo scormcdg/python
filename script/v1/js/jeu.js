@@ -7,7 +7,8 @@
  *   caisses[x]   nombre de caisses empilées sur la colonne x (elles bloquent le passage)
  *   panneaux[x]  valeur affichée par un panneau (nombre ou mot), lue avec lire_nombre() / lire_mot()
  * Robi part de la colonne depart, tourné vers la droite (dir = 1) ou la gauche (dir = -1).
- * But : prendre la clé (en passant dessus) puis ouvrir le coffre avec ouvrir().
+ * But : aller sur le coffre et l'ouvrir avec ouvrir().
+ * Clé (anciens paquets seulement) : si le terrain a une clé, Robi doit d'abord la prendre (en passant dessus).
  *
  * Les commandes sont ajoutées aux fonctions de base de Python (pas besoin d'import).
  * Chaque commande est enregistrée comme un événement ; l'animation et la vérification
@@ -56,6 +57,8 @@
       x: m.depart,
       dir: m.dir,
       cle: false,
+      // la clé n'est exigée que si le terrain en a une (les niveaux actuels n'en ont plus)
+      cleRequise: Object.keys(m.objets).some(function (k) { return m.objets[k] === "cle"; }),
       ouvert: false,
       evenements: [],
       actions: 0
@@ -136,7 +139,7 @@
     ouvrir: function () {
       var m = partie.monde, x = partie.x;
       if (m.objets[x] !== "coffre") echouer({ type: "pas-coffre" }, "n'est pas sur le coffre");
-      if (!partie.cle) echouer({ type: "ferme" }, "ne peut pas ouvrir le coffre : il n'a pas encore la clé");
+      if (partie.cleRequise && !partie.cle) echouer({ type: "ferme" }, "ne peut pas ouvrir le coffre : il n'a pas encore la clé");
       partie.ouvert = true;
       noter({ t: "ouvrir", x: x });
     },

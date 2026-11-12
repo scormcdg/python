@@ -6,7 +6,7 @@
 #
 # Le terrain est une suite de colonnes vues de côté :
 #   sol[x]       hauteur du sol (en marches) de la colonne x
-#   objets[x]    "cle" ou "coffre"
+#   objets[x]    "coffre" (ou "cle" dans les anciens paquets : Robi doit alors la prendre avant d'ouvrir)
 #   caisses[x]   nombre de caisses empilées sur la colonne x (elles bloquent le passage)
 #   panneaux[x]  valeur affichée par un panneau (nombre ou mot), lue avec lire_nombre() / lire_mot()
 # Les commandes sont ajoutées aux fonctions de base de Python (pas besoin d'import).
@@ -31,6 +31,8 @@ def _nouvelle_partie(monde, autorisees):
         "x": monde.get("depart") or 0,
         "dir": monde.get("dir") or 1,
         "cle": False,
+        # la clé n'est exigée que si le terrain en a une (les niveaux actuels n'en ont plus)
+        "cle_requise": "cle" in (monde.get("objets") or {}).values(),
         "ouvert": False,
         "evenements": [],
         "actions": 0,
@@ -145,7 +147,7 @@ def _ouvrir():
     x = _partie["x"]
     if _partie["objets"].get(x) != "coffre":
         _echouer({"type": "pas-coffre"}, "n'est pas sur le coffre")
-    if not _partie["cle"]:
+    if _partie["cle_requise"] and not _partie["cle"]:
         _echouer({"type": "ferme"}, "ne peut pas ouvrir le coffre : il n'a pas encore la clé")
     _partie["ouvert"] = True
     _noter({"t": "ouvrir", "x": x})
