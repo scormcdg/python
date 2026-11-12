@@ -135,6 +135,16 @@ GRANT INSERT ON resultats_series TO serie_eleve;
 
 CREATE ROLE prof_lecture WITH LOGIN PASSWORD 'MOTDEPASSE2';
 GRANT SELECT ON resultats_series, resultats_exam TO prof_lecture;</code></pre>
+<h3>3. Les limites : durée des requêtes et taille des envois</h3>
+<pre><code>-- requêtes coupées après 2 secondes (un envoi prend quelques millisecondes)
+ALTER ROLE serie_eleve SET statement_timeout = '2s';
+ALTER ROLE prof_lecture SET statement_timeout = '10s';
+
+-- taille maximale d'un envoi : 100 Ko (un envoi de série fait quelques Ko)
+ALTER TABLE resultats_series ADD CONSTRAINT taille_max CHECK (octet_length(data::text) &lt;= 100000);
+ALTER TABLE resultats_exam   ADD CONSTRAINT taille_max CHECK (octet_length(data::text) &lt;= 100000);</code></pre>
+<p>On ne peut pas interdire à un rôle les requêtes qui n'utilisent aucune table, comme <code>SELECT count(*) FROM generate_series(1, 1e9)</code>, qui font tourner le processeur pour rien : le timeout les coupe. Mais c'est seulement une valeur par défaut : quelqu'un qui se connecte avec un vrai client Postgres peut la changer (<code>SET statement_timeout = 0</code>). Il protège contre les erreurs et les tentatives naïves. Au pire, une surcharge consomme les heures de calcul de Neon et rend la base indisponible un moment, sans donner accès aux données.</p>
+<p>La taille maximale limite un envoi, pas le nombre d'envois : on peut encore ajouter beaucoup de petites lignes. Si ça arrive : effacer les lignes suspectes, puis changer le mot de passe de <code>serie_eleve</code>.</p>
 <ul>
 <li>Créez les rôles <strong>en SQL</strong>, pas avec le bouton « Roles » de la console Neon : les rôles créés par la console reçoivent beaucoup de droits (lire et modifier toutes les tables).</li>
 <li>Mots de passe : longs (30 caractères), <strong>seulement des lettres et des chiffres</strong>, pour ne pas avoir à les encoder dans l'adresse.</li>
@@ -142,7 +152,7 @@ GRANT SELECT ON resultats_series, resultats_exam TO prof_lecture;</code></pre>
 </ul>
 <p>Pour tirer un mot de passe au hasard, collez ceci dans la console du navigateur (F12, onglet Console) :</p>
 <pre><code>Array.from(crypto.getRandomValues(new Uint8Array(32)), b =&gt; "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"[b % 62]).join("")</code></pre>
-<h3>3. Les adresses dans les paquets</h3>
+<h3>4. Les adresses dans les paquets</h3>
 <ul>
 <li><code>serie.js</code> de chaque série : <code>neon: "postgresql://serie_eleve:MOTDEPASSE1@…"</code> et <code>table: "resultats_series"</code>.</li>
 <li><code>reglages.js</code> du viewer : <code>neon: "postgresql://prof_lecture:MOTDEPASSE2@…"</code>.</li>
@@ -153,7 +163,8 @@ GRANT SELECT ON resultats_series, resultats_exam TO prof_lecture;</code></pre>
 <p>Les évaluations ont leur propre table, <code>resultats_exam</code>, et un rôle créé juste avant et supprimé juste après. Ainsi, l'adresse des séries (lisible par un élève qui fouille un paquet) ne permet pas d'écrire de faux résultats d'évaluation.</p>
 <h3>Avant</h3>
 <pre><code>CREATE ROLE eval_nov WITH LOGIN PASSWORD 'NOUVEAUMOTDEPASSE';
-GRANT INSERT ON resultats_exam TO eval_nov;</code></pre>
+GRANT INSERT ON resultats_exam TO eval_nov;
+ALTER ROLE eval_nov SET statement_timeout = '2s';</code></pre>
 <p>Dans le <code>serie.js</code> du paquet d'évaluation :</p>
 <pre><code>neon: "postgresql://eval_nov:NOUVEAUMOTDEPASSE@ep-xxxx-pooler.c-3.eu-central-1.aws.neon.tech/neondb?sslmode=require&amp;channel_binding=require",
 table: "resultats_exam",
@@ -182,7 +193,11 @@ WHERE trigger_name = 'date_serveur';</code></pre>
 <pre><code>SELECT grantee, table_name, privilege_type FROM information_schema.role_table_grants
 WHERE table_name IN ('resultats_series', 'resultats_exam') AND grantee &lt;&gt; current_user
 ORDER BY grantee, table_name;</code></pre>
-<p>Attendu : <code>serie_eleve</code> INSERT sur <code>resultats_series</code> ; <code>prof_lecture</code> SELECT sur les deux ; pendant une évaluation, <code>eval_…</code> INSERT sur <code>resultats_exam</code>. Rien d'autre.</p>
+<h3>Les limites</h3>
+<pre><code>SELECT rolname, rolconfig FROM pg_roles WHERE rolconfig IS NOT NULL;
+SELECT conrelid::regclass AS table_, conname FROM pg_constraint WHERE conname = 'taille_max';</code></pre>
+<p>Attendu : <code>statement_timeout</code> pour chaque rôle, et <code>taille_max</code> sur les deux tables.</p>
+<p>Droits attendus : <code>serie_eleve</code> INSERT sur <code>resultats_series</code> ; <code>prof_lecture</code> SELECT sur les deux ; pendant une évaluation, <code>eval_…</code> INSERT sur <code>resultats_exam</code>. Rien d'autre.</p>
 <h3>Les rôles existants</h3>
 <pre><code>SELECT rolname FROM pg_roles WHERE rolcanlogin ORDER BY 1;</code></pre>
 <p>Un ancien rôle d'évaluation encore présent : supprimez-le (voir <a href="#evaluation">Après</a>).</p>
@@ -250,6 +265,7 @@ DROP ROLE nom_du_role;</code></pre>
 <tr><td>Lire les noms des élèves dans la base</td><td>chiffrés ; seul le viewer (clé privée) les lit</td></tr>
 <tr><td>Lire ou modifier les envois des autres avec l'adresse d'une série</td><td>impossible : <code>serie_eleve</code> peut seulement ajouter</td></tr>
 <tr><td>Écrire de faux résultats d'évaluation</td><td>table à part, rôle d'évaluation créé juste avant et supprimé juste après, Safe Exam Browser pendant</td></tr>
+<tr><td>Envoi énorme, requête qui fait tourner le processeur</td><td>taille maximale (100 Ko) et <code>statement_timeout</code> ; contournable par quelqu'un de déterminé, sans accès aux données</td></tr>
 <tr><td>Antidater ou postdater un envoi</td><td><code>created_at</code> forcé par le serveur (trigger)</td></tr>
 <tr><td>Envoyer de faux résultats de série, au nom d'un autre élève</td><td><strong>pas protégé</strong> : l'envoi part du navigateur ; un élève aidé d'une IA peut le faire. Les séries servent au suivi, pas à une note.</td></tr>
 <tr><td>Copier le code d'un camarade, se faire aider</td><td>pas détectable par la base ; pour une évaluation : Safe Exam Browser et surveillance</td></tr>
@@ -266,6 +282,8 @@ DROP ROLE nom_du_role;</code></pre>
 <tr><td>Viewer : une évaluation n'apparaît pas</td><td>aucun envoi encore dans <code>resultats_exam</code> (une série apparaît dès son premier envoi)</td></tr>
 <tr><td>Viewer : élève « illisible (autre clé) »</td><td>la série a une autre clé publique que celle qui correspond à la clé privée du viewer</td></tr>
 <tr><td><code>DROP ROLE</code> refuse : « some objects depend on it »</td><td>faire d'abord <code>DROP OWNED BY nom_du_role;</code></td></tr>
+<tr><td>« L'envoi n'a pas marché (… violates check constraint "taille_max") »</td><td>envoi de plus de 100 Ko : code d'élève anormalement long</td></tr>
+<tr><td>« L'envoi n'a pas marché (canceling statement due to statement timeout) »</td><td>base surchargée, ou timeout trop court ; réessayer plus tard</td></tr>
 <tr><td>Le bouton « Envoyer mes résultats » n'apparaît pas</td><td><code>neon</code> vide ou <code>null</code> dans <code>serie.js</code>, ou aucun exercice noté</td></tr>
 <tr><td>Dans Safe Exam Browser, la série ne se charge pas ou l'envoi échoue</td><td>un des sites de la liste n'est pas autorisé</td></tr>
 <tr><td>« Tester ce code » du viewer ne fait rien</td><td>fenêtres surgissantes bloquées : les autoriser pour le site Moodle</td></tr>
