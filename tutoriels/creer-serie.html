@@ -183,7 +183,22 @@ footer { margin-top: 48px; color: var(--doux); font-size: 0.9rem; }
 <p>Des exercices complets, testés, sont dans la partie <a href="#exemples-complets">Exemples complets</a>.</p>
 <p>Chaque exercice est entre <code>{ }</code>, séparé du suivant par une virgule. Le plus simple est de copier un exercice existant de la série de départ et de le modifier.</p>
 <h2 id="les-verifications">Les vérifications</h2>
-<p>Chaque vérification de <code>checks</code> devient un critère dans la liste « Vérification » : son <code>label</code> est affiché en vert ou en rouge, et son message d'échec (<code>fail</code> ou message automatique) apparaît en dessous. Chaque vérification a un <code>id</code> unique dans l'exercice et un <code>kind</code> :</p>
+<p>Chaque vérification de <code>checks</code> devient un critère dans la liste « Vérification » de l'exercice. Champs communs à toutes les vérifications :</p>
+<table>
+<thead><tr><th>Champ</th><th>Rôle</th></tr></thead>
+<tbody>
+<tr><td><code>id</code></td><td>identifiant court, unique dans l'exercice : <code>"def"</code>, <code>"dessin"</code>… (pas affiché ; il sert à ranger les résultats, par exemple dans l'envoi à Neon)</td></tr>
+<tr><td><code>kind</code></td><td>ce qui est vérifié (tableau suivant)</td></tr>
+<tr><td><code>label</code></td><td><strong>le critère affiché à l'élève</strong>, tout le temps, en vert ou en rouge. Il est visible avant même de cliquer sur Vérifier : il sert aussi de consigne. Formulez-le comme ce qui doit être vrai, sans donner la solution : « Le programme pose deux questions avec input() », « moyenne() renvoie la bonne valeur ».</td></tr>
+<tr><td><code>fail</code></td><td>facultatif : l'explication affichée <strong>sous</strong> le critère, seulement s'il est raté. Pour les dessins, couleurs, affichages et appels, un message automatique précis est déjà donné (« … est trop grand », « … renvoie 12 au lieu de … ») : <code>fail</code> s'ajoute après. Pour <code>"source"</code> et <code>"calls"</code>, il n'y a pas de message automatique : mettez toujours un <code>fail</code>.</td></tr>
+</tbody>
+</table>
+<p>Ce que voit l'élève, après avoir cliqué sur Vérifier :</p>
+<div class="highlight"><pre><code>✓ La fonction moyenne(a, b, c) existe, avec trois paramètres          ← label (réussi)
+✓ moyenne() utilise return                                           ← label (réussi)
+✗ moyenne() renvoie la bonne valeur (testé avec 12, 15, 9 ; …)       ← label (raté)
+    moyenne(10, 15, 12) renvoie 12 au lieu de 12.333333333333334.    ← message automatique (+ fail s'il y en a un)</code></pre></div>
+<p>Les valeurs possibles de <code>kind</code>, et leurs champs :</p>
 <table>
 <thead>
 <tr>
