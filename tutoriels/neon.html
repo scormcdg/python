@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gérer les résultats dans Neon</title>
+<style>
+@font-face { font-family: "Atkinson Hyperlegible"; src: url("../script/v1/vendor/fonts/atkinson-hyperlegible-latin-400-normal.woff2") format("woff2"); font-weight: 400; font-display: swap; }
+@font-face { font-family: "Atkinson Hyperlegible"; src: url("../script/v1/vendor/fonts/atkinson-hyperlegible-latin-700-normal.woff2") format("woff2"); font-weight: 700; font-display: swap; }
+@font-face { font-family: "JetBrains Mono"; src: url("../script/v1/vendor/fonts/jetbrains-mono-latin-400-normal.woff2") format("woff2"); font-weight: 400; font-display: swap; }
+:root { --fond: #f6f7fb; --papier: #ffffff; --texte: #1e2430; --doux: #5a6478; --bordure: #d9dfea; --accent: #2a4ba0; --code-fond: #f3f5fa; --mono: "JetBrains Mono", ui-monospace, Consolas, monospace; }
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; background: var(--fond); color: var(--texte); font: 17px/1.6 "Atkinson Hyperlegible", system-ui, sans-serif; }
+main { max-width: 860px; margin: 0 auto; padding: 32px 20px 64px; }
+h1 { font-size: 2rem; margin: 0 0 4px; color: var(--accent); }
+.sous-titre { color: var(--doux); margin: 0 0 20px; }
+nav.sommaire { background: var(--papier); border: 1px solid var(--bordure); border-radius: 10px; padding: 12px 18px; margin-bottom: 28px; }
+nav.sommaire ol { margin: 4px 0 0; padding-left: 22px; columns: 2; column-gap: 28px; }
+nav.sommaire a { color: var(--accent); text-decoration: none; }
+nav.sommaire a:hover { text-decoration: underline; }
+h2 { font-size: 1.45rem; margin: 40px 0 10px; padding-top: 6px; border-top: 2px solid var(--bordure); color: var(--accent); }
+h3 { font-size: 1.12rem; margin: 26px 0 8px; }
+code, pre { font-family: var(--mono); font-variant-ligatures: none; font-size: 0.88em; }
+:not(pre) > code { background: var(--code-fond); border: 1px solid #e4e8f1; border-radius: 4px; padding: 0 4px; white-space: nowrap; }
+pre { position: relative; background: var(--code-fond); border: 1px solid var(--bordure); border-radius: 8px; padding: 12px 14px; overflow-x: auto; line-height: 1.5; }
+pre .copier { position: absolute; top: 6px; right: 6px; font: 13px "Atkinson Hyperlegible", sans-serif; background: #fff; border: 1px solid var(--bordure); border-radius: 5px; padding: 2px 8px; cursor: pointer; color: var(--doux); }
+pre .copier:hover { color: var(--accent); border-color: var(--accent); }
+.tableau { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; background: var(--papier); font-size: 0.95rem; margin: 8px 0 14px; }
+th, td { border: 1px solid var(--bordure); padding: 6px 10px; text-align: left; vertical-align: top; }
+th { background: #eef1f8; }
+.pastille { display: inline-block; width: 16px; height: 16px; border-radius: 4px; border: 1px solid rgba(0,0,0,.25); vertical-align: -3px; margin-left: 6px; }
+.nuancier { display: flex; flex-wrap: wrap; gap: 8px; margin: 6px 0 10px; }
+.nuancier span { display: inline-flex; align-items: center; gap: 6px; background: var(--papier); border: 1px solid var(--bordure); border-radius: 6px; padding: 3px 9px 3px 4px; font: 14px var(--mono); }
+.nuancier i { display: inline-block; width: 22px; height: 22px; border-radius: 4px; border: 1px solid rgba(0,0,0,.25); }
+footer { margin-top: 48px; color: var(--doux); font-size: 0.9rem; }
+@media (max-width: 600px) { nav.sommaire ol { columns: 1; } body { font-size: 16px; } :not(pre) > code { white-space: normal; overflow-wrap: anywhere; } }
+@media print { pre .copier, nav.sommaire { display: none; } body { background: #fff; } }
+</style>
+<style>
+nav.sommaire ol { padding-left: 30px; }
+.attention { background: #fff6e5; border: 1px solid #f0c36d; border-radius: 8px; padding: 10px 14px; margin: 12px 0; }
+.attention strong:first-child { color: #8a5a00; }
+</style>
+</head>
+<body>
+<main>
+<h1>Gérer les résultats dans Neon</h1>
+<p class="sous-titre">Le bouton « Envoyer mes résultats » des séries, la base Neon, les rôles, les évaluations et le viewer « Résultats dans Neon ». Toutes les commandes SQL se tapent dans l'éditeur SQL de la console Neon.</p>
+<nav class="sommaire"><strong>Sommaire</strong><ol>
+<li><a href="#principe">Le principe</a></li>
+<li><a href="#reglages">Où sont les réglages</a></li>
+<li><a href="#installation">Mise en place (une seule fois)</a></li>
+<li><a href="#evaluation">Pour une évaluation</a></li>
+<li><a href="#verifier">Vérifier la configuration</a></li>
+<li><a href="#sql">Consulter les résultats en SQL</a></li>
+<li><a href="#gerer">Gérer les données et les rôles</a></li>
+<li><a href="#cles">Les clés de chiffrement</a></li>
+<li><a href="#securite">Ce qui est protégé, ce qui ne l'est pas</a></li>
+<li><a href="#pieges">Pièges fréquents</a></li>
+</ol></nav>
+
+<div class="attention"><strong>Cette page est publique.</strong> Les mots de passe, adresses Neon et clés ci-dessous sont des exemples à remplacer. Ne publiez jamais les vrais sur GitHub : ils vont seulement dans les paquets SCORM, dans Moodle.</div>
+
+<h2 id="principe">Le principe</h2>
+<p>Quand un élève clique sur « Envoyer mes résultats », la série relance la vérification de chaque exercice noté avec son code actuel, puis ajoute une ligne dans une table de Neon, colonne <code>data</code> (JSON) :</p>
+<pre><code>{ "serie": "serie05", "titre": "Série 05 – Dialoguer avec print et input",
+  "eleve_chiffre": "k3Vb9…Qw==", "date": "…", "python": "pyodide",
+  "exercices": [ { "id": "ex1", "titre": "Exercice 1", "code": "…", "tests": [1, 1, 0, 1] }, … ] }</code></pre>
+<ul>
+<li><code>tests</code> : une valeur par vérification de l'exercice, dans l'ordre du fichier d'exercices (1 = réussie, 0 = ratée).</li>
+<li><code>eleve_chiffre</code> : le login Moodle et le nom (« Nom, Prénom ») de l'élève, chiffrés. Seul le viewer peut les lire.</li>
+<li><code>date</code> : heure de l'ordinateur de l'élève, falsifiable. L'heure qui compte est la colonne <code>created_at</code>, mise par le serveur.</li>
+</ul>
+<p>Le viewer « Résultats dans Neon » (paquet SCORM caché aux élèves) lit les tables, déchiffre les noms et affiche un tableau élève × exercice.</p>
+<table>
+<thead><tr><th>Rôle Neon (utilisateur)</th><th>Utilisé par</th><th><code>resultats_series</code></th><th><code>resultats_exam</code></th></tr></thead>
+<tbody>
+<tr><td><code>serie_eleve</code></td><td>les séries (<code>serie.js</code>)</td><td>ajouter</td><td>—</td></tr>
+<tr><td><code>eval_…</code></td><td>une évaluation, supprimé après</td><td>—</td><td>ajouter</td></tr>
+<tr><td><code>prof_lecture</code></td><td>le viewer (<code>reglages.js</code>)</td><td>lire</td><td>lire</td></tr>
+</tbody>
+</table>
+<p>Chaque rôle a son propre mot de passe, donc sa propre adresse de connexion (le « code Neon ») :</p>
+<pre><code>postgresql://serie_eleve:MOTDEPASSE@ep-xxxx-pooler.c-3.eu-central-1.aws.neon.tech/neondb?sslmode=require&amp;channel_binding=require
+             └─ rôle ──┘ └─ mot ─┘ └───────────────── serveur et base (toujours les mêmes) ─────────────────┘
+                         de passe</code></pre>
+
+<h2 id="reglages">Où sont les réglages</h2>
+<h3>Dans chaque série : <code>serie.js</code></h3>
+<table>
+<thead><tr><th>Réglage</th><th>Rôle</th></tr></thead>
+<tbody>
+<tr><td><code>neon</code></td><td>adresse Neon du rôle qui ajoute les lignes (<code>serie_eleve</code>, ou le rôle de l'évaluation) ; <code>null</code> : pas de bouton « Envoyer mes résultats »</td></tr>
+<tr><td><code>table</code></td><td><code>"resultats_series"</code> pour les séries, <code>"resultats_exam"</code> pour une évaluation</td></tr>
+<tr><td><code>cle</code></td><td>clé <strong>publique</strong> qui chiffre le login et le nom ; la même dans toutes les séries et évaluations</td></tr>
+</tbody>
+</table>
+<h3>Dans le viewer : <code>reglages.js</code></h3>
+<table>
+<thead><tr><th>Réglage</th><th>Rôle</th></tr></thead>
+<tbody>
+<tr><td><code>neon</code></td><td>adresse Neon de <code>prof_lecture</code></td></tr>
+<tr><td><code>tables</code></td><td>tables lues : <code>["resultats_series", "resultats_exam"]</code></td></tr>
+<tr><td><code>cle_privee</code></td><td>clé <strong>privée</strong> qui déchiffre les noms ; uniquement ici, jamais dans une série</td></tr>
+</tbody>
+</table>
+<p>Le viewer doit toujours être <strong>caché aux élèves</strong> dans Moodle : il contient la clé privée et l'adresse qui lit tous les résultats.</p>
+
+<h2 id="installation">Mise en place (une seule fois)</h2>
+<h3>1. Les tables et l'heure du serveur</h3>
+<pre><code>CREATE TABLE resultats_series (
+  id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  data jsonb NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE TABLE resultats_exam (
+  id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  data jsonb NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+-- l'heure d'enregistrement est toujours celle du serveur, quoi qu'on envoie
+CREATE OR REPLACE FUNCTION date_serveur() RETURNS trigger AS $$
+BEGIN NEW.created_at := now(); RETURN NEW; END $$ LANGUAGE plpgsql;
+
+CREATE TRIGGER date_serveur BEFORE INSERT OR UPDATE ON resultats_series
+  FOR EACH ROW EXECUTE FUNCTION date_serveur();
+CREATE TRIGGER date_serveur BEFORE INSERT OR UPDATE ON resultats_exam
+  FOR EACH ROW EXECUTE FUNCTION date_serveur();</code></pre>
+<h3>2. Les rôles des séries et du viewer</h3>
+<pre><code>CREATE ROLE serie_eleve WITH LOGIN PASSWORD 'MOTDEPASSE1';
+GRANT INSERT ON resultats_series TO serie_eleve;
+
+CREATE ROLE prof_lecture WITH LOGIN PASSWORD 'MOTDEPASSE2';
+GRANT SELECT ON resultats_series, resultats_exam TO prof_lecture;</code></pre>
+<ul>
+<li>Créez les rôles <strong>en SQL</strong>, pas avec le bouton « Roles » de la console Neon : les rôles créés par la console reçoivent beaucoup de droits (lire et modifier toutes les tables).</li>
+<li>Mots de passe : longs (30 caractères), <strong>seulement des lettres et des chiffres</strong>, pour ne pas avoir à les encoder dans l'adresse.</li>
+<li>L'éditeur SQL de la console vous connecte avec le rôle propriétaire de la base (souvent <code>neondb_owner</code>) : pas de mot de passe à taper.</li>
+</ul>
+<p>Pour tirer un mot de passe au hasard, collez ceci dans la console du navigateur (F12, onglet Console) :</p>
+<pre><code>Array.from(crypto.getRandomValues(new Uint8Array(32)), b =&gt; "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"[b % 62]).join("")</code></pre>
+<h3>3. Les adresses dans les paquets</h3>
+<ul>
+<li><code>serie.js</code> de chaque série : <code>neon: "postgresql://serie_eleve:MOTDEPASSE1@…"</code> et <code>table: "resultats_series"</code>.</li>
+<li><code>reglages.js</code> du viewer : <code>neon: "postgresql://prof_lecture:MOTDEPASSE2@…"</code>.</li>
+</ul>
+<p>Puis testez : « Envoyer mes résultats » dans une série doit afficher « Résultats envoyés à … ✓ », et la série doit apparaître dans le viewer avec votre nom.</p>
+
+<h2 id="evaluation">Pour une évaluation</h2>
+<p>Les évaluations ont leur propre table, <code>resultats_exam</code>, et un rôle créé juste avant et supprimé juste après. Ainsi, l'adresse des séries (lisible par un élève qui fouille un paquet) ne permet pas d'écrire de faux résultats d'évaluation.</p>
+<h3>Avant</h3>
+<pre><code>CREATE ROLE eval_nov WITH LOGIN PASSWORD 'NOUVEAUMOTDEPASSE';
+GRANT INSERT ON resultats_exam TO eval_nov;</code></pre>
+<p>Dans le <code>serie.js</code> du paquet d'évaluation :</p>
+<pre><code>neon: "postgresql://eval_nov:NOUVEAUMOTDEPASSE@ep-xxxx-pooler.c-3.eu-central-1.aws.neon.tech/neondb?sslmode=require&amp;channel_binding=require",
+table: "resultats_exam",
+cle: "…la même clé publique que les séries…",</code></pre>
+<p>Gardez l'activité <strong>cachée</strong> dans Moodle jusqu'au début de l'évaluation.</p>
+<h3>Pendant : Safe Exam Browser</h3>
+<p>Outils de développement interdits (réglage par défaut). Sites à autoriser, sinon la série ne se charge pas ou l'envoi échoue :</p>
+<ul>
+<li>votre Moodle ;</li>
+<li><code>scormcdg.github.io</code> (fichiers communs) ;</li>
+<li><code>cdn.jsdelivr.net</code> (Python, Pyodide) ;</li>
+<li><code>esm.sh</code> (bibliothèque Neon) ;</li>
+<li><code>*.neon.tech</code> (la base).</li>
+</ul>
+<h3>Après</h3>
+<pre><code>DROP OWNED BY eval_nov;   -- retire ses droits (sinon DROP ROLE refuse)
+DROP ROLE eval_nov;</code></pre>
+<p>Cachez l'activité dans Moodle en même temps. Les résultats déjà envoyés restent dans <code>resultats_exam</code> et le viewer les affiche toujours. Pour repérer un envoi tardif : case « tous les envois » du viewer, colonne « Envoyé le » (heure du serveur).</p>
+
+<h2 id="verifier">Vérifier la configuration</h2>
+<h3>Les triggers de l'heure</h3>
+<pre><code>SELECT event_object_table, event_manipulation FROM information_schema.triggers
+WHERE trigger_name = 'date_serveur';</code></pre>
+<p>Attendu : <code>INSERT</code> et <code>UPDATE</code> pour chacune des deux tables (une ligne par événement).</p>
+<h3>Les droits des rôles</h3>
+<pre><code>SELECT grantee, table_name, privilege_type FROM information_schema.role_table_grants
+WHERE table_name IN ('resultats_series', 'resultats_exam') AND grantee &lt;&gt; current_user
+ORDER BY grantee, table_name;</code></pre>
+<p>Attendu : <code>serie_eleve</code> INSERT sur <code>resultats_series</code> ; <code>prof_lecture</code> SELECT sur les deux ; pendant une évaluation, <code>eval_…</code> INSERT sur <code>resultats_exam</code>. Rien d'autre.</p>
+<h3>Les rôles existants</h3>
+<pre><code>SELECT rolname FROM pg_roles WHERE rolcanlogin ORDER BY 1;</code></pre>
+<p>Un ancien rôle d'évaluation encore présent : supprimez-le (voir <a href="#evaluation">Après</a>).</p>
+
+<h2 id="sql">Consulter les résultats en SQL</h2>
+<p>Le plus simple est le viewer. En SQL, les noms restent chiffrés : on voit les résultats, pas qui les a envoyés.</p>
+<h3>Nombre d'envois par série</h3>
+<pre><code>SELECT data-&gt;&gt;'serie' AS serie, count(*) AS envois, max(created_at) AS dernier
+FROM resultats_series GROUP BY 1 ORDER BY 1;</code></pre>
+<h3>Une ligne par envoi et par exercice</h3>
+<pre><code>SELECT created_at, e-&gt;&gt;'id' AS exo, e-&gt;&gt;'tests' AS tests
+FROM resultats_series, jsonb_array_elements(data-&gt;'exercices') AS e
+WHERE data-&gt;&gt;'serie' = 'serie05'
+ORDER BY created_at;</code></pre>
+<h3>Taux de réussite d'une vérification</h3>
+<pre><code>-- vérification n° 3 (indice 2) de l'exercice ex2 de la série 05
+SELECT round(100.0 * avg((e-&gt;'tests'-&gt;&gt;2)::int)) AS pourcentage
+FROM resultats_series, jsonb_array_elements(data-&gt;'exercices') AS e
+WHERE data-&gt;&gt;'serie' = 'serie05' AND e-&gt;&gt;'id' = 'ex2';</code></pre>
+<p>Le visualiseur de tables de Neon affiche les tableaux JSON sur plusieurs lignes : c'est seulement l'affichage, la donnée est bien <code>[1, 1, 0, 1]</code>.</p>
+
+<h2 id="gerer">Gérer les données et les rôles</h2>
+<h3>Effacer des envois</h3>
+<pre><code>-- les envois d'une série de test
+DELETE FROM resultats_series WHERE data-&gt;&gt;'serie' = 'test';
+
+-- les envois d'une série avant une date
+DELETE FROM resultats_series WHERE data-&gt;&gt;'serie' = 'serie05' AND created_at &lt; '2026-09-01';
+
+-- tout vider (fin d'année), sans retour possible
+TRUNCATE resultats_series;</code></pre>
+<p>Pour garder une trace avant d'effacer : « Télécharger en CSV » dans le viewer (avec les noms et le code).</p>
+<h3>Changer un mot de passe</h3>
+<pre><code>ALTER ROLE serie_eleve WITH PASSWORD 'NOUVEAUMOTDEPASSE';</code></pre>
+<p>L'ancienne adresse cesse aussitôt de marcher : mettez la nouvelle dans le <code>serie.js</code> de <strong>toutes</strong> les séries et remplacez les paquets dans Moodle. À faire si une adresse a été publiée par erreur.</p>
+<h3>Supprimer un rôle</h3>
+<pre><code>DROP OWNED BY nom_du_role;
+DROP ROLE nom_du_role;</code></pre>
+<h3>Retirer des droits à un rôle existant</h3>
+<pre><code>REVOKE ALL ON resultats_series, resultats_exam FROM nom_du_role;</code></pre>
+
+<h2 id="cles">Les clés de chiffrement</h2>
+<p>Le login et le nom sont chiffrés avec RSA-OAEP (2048 bits, SHA-256) :</p>
+<ul>
+<li>la clé <strong>publique</strong> (<code>cle</code> dans <code>serie.js</code>) chiffre seulement ; un élève qui la lit ne peut rien déchiffrer ;</li>
+<li>la clé <strong>privée</strong> (<code>cle_privee</code> dans <code>reglages.js</code> du viewer) déchiffre.</li>
+</ul>
+<p>Le chiffrement ajoute du hasard : le même élève donne un texte chiffré différent à chaque envoi. On ne peut donc pas retrouver un élève en chiffrant soi-même son login. Le viewer regroupe les envois après déchiffrement.</p>
+<div class="attention"><strong>Gardez une copie de la clé privée</strong> hors de Moodle et de GitHub. Sans elle, les noms déjà envoyés ne peuvent plus être lus (les résultats et le code restent lisibles).</div>
+<h3>Créer une nouvelle paire de clés</h3>
+<p>Seulement si la clé privée a fuité ou est perdue. Collez ceci dans la console du navigateur (F12, onglet Console) :</p>
+<pre><code>(async () =&gt; {
+  const k = await crypto.subtle.generateKey({ name: "RSA-OAEP", modulusLength: 2048,
+    publicExponent: new Uint8Array([1, 0, 1]), hash: "SHA-256" }, true, ["encrypt", "decrypt"]);
+  const b64 = async (f, c) =&gt; btoa(String.fromCharCode(...new Uint8Array(await crypto.subtle.exportKey(f, c))));
+  console.log("cle (serie.js) :\n" + await b64("spki", k.publicKey));
+  console.log("cle_privee (reglages.js) :\n" + await b64("pkcs8", k.privateKey));
+})();</code></pre>
+<p>Mettez la nouvelle clé publique dans toutes les séries et la nouvelle clé privée dans le viewer. Les envois faits avec l'ancienne clé s'affichent alors « illisible (autre clé) » : gardez l'ancien viewer (ou l'ancienne clé) pour les relire.</p>
+
+<h2 id="securite">Ce qui est protégé, ce qui ne l'est pas</h2>
+<table>
+<thead><tr><th>Risque</th><th>Protection</th></tr></thead>
+<tbody>
+<tr><td>Lire les noms des élèves dans la base</td><td>chiffrés ; seul le viewer (clé privée) les lit</td></tr>
+<tr><td>Lire ou modifier les envois des autres avec l'adresse d'une série</td><td>impossible : <code>serie_eleve</code> peut seulement ajouter</td></tr>
+<tr><td>Écrire de faux résultats d'évaluation</td><td>table à part, rôle d'évaluation créé juste avant et supprimé juste après, Safe Exam Browser pendant</td></tr>
+<tr><td>Antidater ou postdater un envoi</td><td><code>created_at</code> forcé par le serveur (trigger)</td></tr>
+<tr><td>Envoyer de faux résultats de série, au nom d'un autre élève</td><td><strong>pas protégé</strong> : l'envoi part du navigateur ; un élève aidé d'une IA peut le faire. Les séries servent au suivi, pas à une note.</td></tr>
+<tr><td>Copier le code d'un camarade, se faire aider</td><td>pas détectable par la base ; pour une évaluation : Safe Exam Browser et surveillance</td></tr>
+</tbody>
+</table>
+
+<h2 id="pieges">Pièges fréquents</h2>
+<table>
+<thead><tr><th>Symptôme</th><th>Cause probable</th></tr></thead>
+<tbody>
+<tr><td>« L'envoi n'a pas marché (permission denied for table …) »</td><td><code>GRANT INSERT</code> oublié, ou <code>table</code> de <code>serie.js</code> différente de celle du <code>GRANT</code></td></tr>
+<tr><td>« L'envoi n'a pas marché (password authentication failed …) »</td><td>mot de passe de l'adresse différent de celui du <code>CREATE ROLE</code>, ou rôle déjà supprimé</td></tr>
+<tr><td>Viewer : « Table illisible : resultats_exam … »</td><td><code>GRANT SELECT</code> oublié pour <code>prof_lecture</code>, ou table pas encore créée</td></tr>
+<tr><td>Viewer : une évaluation n'apparaît pas</td><td>aucun envoi encore dans <code>resultats_exam</code> (une série apparaît dès son premier envoi)</td></tr>
+<tr><td>Viewer : élève « illisible (autre clé) »</td><td>la série a une autre clé publique que celle qui correspond à la clé privée du viewer</td></tr>
+<tr><td><code>DROP ROLE</code> refuse : « some objects depend on it »</td><td>faire d'abord <code>DROP OWNED BY nom_du_role;</code></td></tr>
+<tr><td>Le bouton « Envoyer mes résultats » n'apparaît pas</td><td><code>neon</code> vide ou <code>null</code> dans <code>serie.js</code>, ou aucun exercice noté</td></tr>
+<tr><td>Dans Safe Exam Browser, la série ne se charge pas ou l'envoi échoue</td><td>un des sites de la liste n'est pas autorisé</td></tr>
+<tr><td>« Tester ce code » du viewer ne fait rien</td><td>fenêtres surgissantes bloquées : les autoriser pour le site Moodle</td></tr>
+<tr><td>Adresse avec des caractères spéciaux qui ne marche pas</td><td>ils doivent être encodés (<code>+</code> → <code>%2B</code>, <code>/</code> → <code>%2F</code>…) ; plus simple : lettres et chiffres seulement</td></tr>
+</tbody>
+</table>
+</main>
+<script>
+document.querySelectorAll("table").forEach(function (t) { var d = document.createElement("div"); d.className = "tableau"; t.parentNode.insertBefore(d, t); d.appendChild(t); });
+document.querySelectorAll("pre").forEach(function (pre) {
+  var b = document.createElement("button"); b.className = "copier"; b.type = "button"; b.textContent = "Copier";
+  b.onclick = function () {
+    var texte = pre.querySelector("code").innerText;
+    var ok = function () { b.textContent = "Copié !"; setTimeout(function () { b.textContent = "Copier"; }, 1500); };
+    if (navigator.clipboard) navigator.clipboard.writeText(texte).then(ok, function () {});
+  };
+  pre.appendChild(b);
+});
+</script>
+</body>
+</html>
