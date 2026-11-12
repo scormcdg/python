@@ -42,10 +42,10 @@ footer { margin-top: 48px; color: var(--doux); font-size: 0.9rem; }
 <body>
 <main>
 <h1>Créer une nouvelle série SCORM</h1>
-<p class="sous-titre">Faire une nouvelle série d'exercices Python à partir d'un zip de série existant, sans rien changer sur GitHub.</p>
-<nav class="sommaire"><strong>Sommaire</strong><ol><li><a href="#le-principe">Le principe</a></li><li><a href="#etapes">Étapes</a></li><li><a href="#le-fichier-dexercices">Le fichier d'exercices</a></li><li><a href="#les-verifications">Les vérifications</a></li><li><a href="#pieges-frequents">Pièges fréquents</a></li></ol></nav>
+<p class="sous-titre">Faire une nouvelle série d'exercices Python à partir d'un zip de série existant, sans rien changer sur GitHub : on change seulement <code>serie.js</code> et le fichier d'exercices.</p>
+<nav class="sommaire"><strong>Sommaire</strong><ol><li><a href="#le-principe">Le principe</a></li><li><a href="#serie-js">Les réglages : serie.js</a></li><li><a href="#etapes">Étapes</a></li><li><a href="#le-fichier-dexercices">Le fichier d'exercices</a></li><li><a href="#les-verifications">Les vérifications</a></li><li><a href="#pieges-frequents">Pièges fréquents</a></li></ol></nav>
 <h2 id="le-principe">Le principe</h2>
-<p>Un zip de série ne contient que 4 fichiers. Tout le reste (moteur Python, tortue, éditeur, vérification, styles) est chargé depuis GitHub, à l'adresse <code>https://scormcdg.github.io/python/script/v1/</code>.</p>
+<p>Un zip de série ne contient que 5 fichiers. Tout le reste (moteur Python, tortue, éditeur, vérification, envoi des résultats, styles) est chargé depuis GitHub : <code>https://scormcdg.github.io/python/script/pyodide/v1/</code> (Pyodide, le vrai Python) ou <code>https://scormcdg.github.io/python/script/v1/</code> (Skulpt, l'ancienne version).</p>
 <table>
 <thead>
 <tr>
@@ -61,51 +61,78 @@ footer { margin-top: 48px; color: var(--doux); font-size: 0.9rem; }
 <td>oui, c'est l'essentiel du travail</td>
 </tr>
 <tr>
-<td><code>index.html</code></td>
-<td>la page ; elle indique le titre et le nom du fichier d'exercices</td>
-<td>oui : le titre (2 fois) et le nom du fichier</td>
+<td><code>serie.js</code></td>
+<td>les réglages de la série : titre, identifiant, fichier d'exercices, version de Python, lien du tutoriel, envoi des résultats à Neon</td>
+<td>oui : le titre, l'identifiant et le nom du fichier d'exercices</td>
 </tr>
 <tr>
-<td><code>imsmanifest.xml</code></td>
-<td>la fiche SCORM lue par Moodle</td>
-<td>oui : les identifiants, le titre et le nom du fichier</td>
+<td><code>index.html</code></td>
+<td>la page</td>
+<td>non</td>
 </tr>
 <tr>
 <td><code>charger.js</code></td>
-<td>charge les fichiers communs depuis GitHub</td>
+<td>charge les fichiers communs depuis GitHub, d'après <code>serie.js</code></td>
+<td>non</td>
+</tr>
+<tr>
+<td><code>imsmanifest.xml</code></td>
+<td>la fiche SCORM lue par Moodle (titre générique « Série Python » : c'est le nom de l'activité dans Moodle qui s'affiche)</td>
 <td>non</td>
 </tr>
 </tbody>
 </table>
 <p>Comme les fichiers communs sont sur GitHub, une correction faite sur GitHub s'applique à toutes les séries déjà dans Moodle. En contrepartie, il faut Internet pour que la série s'affiche.</p>
+
+<h2 id="serie-js">Les réglages : <code>serie.js</code></h2>
+<div class="highlight"><pre><span></span><code>var SERIE_REGLAGES = {
+  titre: "Série 06 – Les listes",      // en haut de la page et dans l'onglet du navigateur
+  id: "serie06",                       // différent pour chaque série
+  exercices: "data/serie06.js",        // le fichier d'exercices
+  python: "pyodide",                   // "pyodide" (le vrai Python) ou "skulpt" (l'ancienne version)
+  neon: "postgresql://serie_eleve:MOTDEPASSE@ep-xxxx-pooler…neon.tech/neondb?sslmode=require&amp;channel_binding=require",
+  table: "resultats_series",           // table de Neon où les résultats sont ajoutés
+  cle: "MIIBIjANBgkqh…",               // clé publique qui chiffre le login et le nom de l'élève
+  tutoriel: { texte: "Tutoriel tortue", lien: "https://scormcdg.github.io/python/tutoriels/tortue.html" }
+};
+</code></pre></div>
+<table>
+<thead><tr><th>Réglage</th><th>Rôle</th></tr></thead>
+<tbody>
+<tr><td><code>titre</code></td><td>titre affiché ; il remplace celui du fichier d'exercices</td></tr>
+<tr><td><code>id</code></td><td>sert à retrouver le travail des élèves : <strong>différent pour chaque série</strong>, et à ne plus changer une fois la série utilisée (sinon les élèves repartent de zéro)</td></tr>
+<tr><td><code>exercices</code></td><td>chemin du fichier d'exercices dans le paquet</td></tr>
+<tr><td><code>python</code></td><td><code>"pyodide"</code> ou <code>"skulpt"</code> ; c'est la seule différence entre les deux versions d'une série</td></tr>
+<tr><td><code>neon</code></td><td>code Neon du rôle qui ajoute les résultats ; <code>null</code> : pas de bouton « Envoyer mes résultats »</td></tr>
+<tr><td><code>table</code></td><td><code>"resultats_series"</code> pour une série, <code>"resultats_exam"</code> pour une évaluation</td></tr>
+<tr><td><code>cle</code></td><td>clé publique de chiffrement, <strong>la même dans toutes les séries</strong> (sinon le viewer ne peut pas lire les noms)</td></tr>
+<tr><td><code>tutoriel</code></td><td>lien en haut de la page ; <code>null</code> : pas de lien</td></tr>
+</tbody>
+</table>
+<p>Pour une nouvelle série, <code>neon</code>, <code>table</code> et <code>cle</code> se recopient tels quels depuis une série existante. Pour une évaluation, <code>neon</code> et <code>table</code> changent : voir le tutoriel <a href="neon.html">Gérer les résultats dans Neon</a>.</p>
+<p>Le code Neon et la clé publique sont dans le paquet, visible seulement dans Moodle : <strong>ne mettez jamais un <code>serie.js</code> rempli sur GitHub</strong>.</p>
+
 <h2 id="etapes">Étapes</h2>
 <p>L'exemple fait une série 06 à partir de la série 05.</p>
 <ol>
-<li><strong>Copier une série existante.</strong> Décompressez <code>serie05-scorm-leger.zip</code> dans un nouveau dossier, par exemple <code>serie06/</code>. Prenez de préférence une série proche de celle que vous voulez faire : ses exercices serviront de modèles.</li>
+<li><strong>Copier une série existante.</strong> Décompressez <code>serie05-pyodide-scorm-leger.zip</code> (ou la version Skulpt) dans un nouveau dossier, par exemple <code>serie06/</code>. Prenez de préférence une série proche de celle que vous voulez faire : ses exercices serviront de modèles.</li>
 <li><strong>Renommer le fichier d'exercices.</strong> <code>data/serie05.js</code> devient <code>data/serie06.js</code>.</li>
-<li>
-<p><strong>Modifier <code>index.html</code>.</strong> Changez le titre dans <code>&lt;title&gt;</code> et dans <code>&lt;h1&gt;</code>, puis le nom du fichier d'exercices :</p>
-<div class="highlight"><pre><span></span><code>var EXERCICES = "data/serie06.js";
-</code></pre></div>
-<p>Le lien « Tutoriel tortue » peut rester ou être supprimé (les 2 lignes <code>&lt;a href=…&gt;</code>).</p>
-</li>
-<li>
-<p><strong>Modifier <code>imsmanifest.xml</code>.</strong> Remplacez <code>serie05_print_input</code> par un nom propre à la nouvelle série (par exemple <code>serie06_listes</code>) partout où il apparaît, et <code>res_serie05</code> par <code>res_serie06</code>. Changez les deux <code>&lt;title&gt;</code> et la ligne <code>&lt;file href="data/serie06.js"/&gt;</code>.</p>
-</li>
-<li><strong>Écrire les exercices</strong> dans <code>data/serie06.js</code> : changez d'abord <code>id</code> (par exemple <code>"serie06"</code>) et <code>titre</code> en haut du fichier, puis les exercices (voir la partie suivante).</li>
-<li><strong>Tester</strong> en ouvrant <code>index.html</code> dans Firefox ou Chrome (double-clic). La page affiche « Mode test » : le travail est gardé dans le navigateur. Pour chaque exercice, collez la solution et cliquez sur Vérifier : tout doit être vert. Essayez aussi une ou deux mauvaises réponses.</li>
+<li><strong>Modifier <code>serie.js</code></strong> : <code>titre</code>, <code>id</code> (<code>"serie06"</code>) et <code>exercices</code> (<code>"data/serie06.js"</code>). Le reste peut rester tel quel.</li>
+<li><strong>Écrire les exercices</strong> dans <code>data/serie06.js</code> (voir la partie suivante). Mettez aussi en haut du fichier le même <code>id</code> et le même <code>titre</code> que dans <code>serie.js</code> : ce sont ceux de <code>serie.js</code> qui comptent, mais le fichier reste ainsi lisible seul.</li>
+<li><strong>Tester</strong> en ouvrant <code>index.html</code> dans Firefox ou Chrome (double-clic). La page affiche « Mode test » : le travail est gardé dans le navigateur. Pour chaque exercice, collez la solution et cliquez sur Vérifier : tout doit être vert. Essayez aussi une ou deux mauvaises réponses. Hors de Moodle, « Envoyer mes résultats » demande un nom : l'envoi de test arrive vraiment dans Neon (effacez-le ensuite si besoin, voir le tutoriel Neon).</li>
 <li>
 <p><strong>Zipper le contenu du dossier</strong>, pas le dossier lui-même : <code>imsmanifest.xml</code> doit être à la racine du zip. Sur Linux, depuis le dossier <code>serie06/</code> :</p>
 <div class="highlight"><pre><span></span><code>zip<span class="w"> </span>-r<span class="w"> </span>../serie06-scorm-leger.zip<span class="w"> </span>.
 </code></pre></div>
 </li>
 <li>
-<p><strong>Mettre dans Moodle</strong> : Ajouter une activité → Paquetage SCORM → déposer le zip. Pour corriger une série déjà en place, modifiez l'activité et remplacez le paquetage : les tentatives déjà faites restent normalement enregistrées (évitez de changer les identifiants des exercices en cours d'année).</p>
+<p><strong>Mettre dans Moodle</strong> : Ajouter une activité → Paquetage SCORM → déposer le zip, et donner un nom à l'activité. Pour corriger une série déjà en place, modifiez l'activité et remplacez le paquetage : les tentatives déjà faites restent normalement enregistrées (évitez de changer l'<code>id</code> de la série et les identifiants des exercices en cours d'année).</p>
 </li>
 </ol>
+<p>Pour passer une série de Skulpt à Pyodide (ou l'inverse) : changez seulement <code>python</code> dans <code>serie.js</code>, rezippez et remplacez le paquetage.</p>
 <p>Si un élève ou vous-même ne voyez pas une correction faite sur GitHub, le navigateur a gardé l'ancienne version : Ctrl+F5.</p>
 <h2 id="le-fichier-dexercices">Le fichier d'exercices</h2>
-<p>Le fichier <code>data/serieXX.js</code> décrit la série dans un objet <code>SERIE</code> : un <code>id</code> (unique pour chaque série), un <code>titre</code> (affiché en haut de la page) et la liste <code>exercices</code>, dans l'ordre des onglets.</p>
+<p>Le fichier <code>data/serieXX.js</code> décrit la série dans un objet <code>SERIE</code> : un <code>id</code> et un <code>titre</code> (remplacés par ceux de <code>serie.js</code>) et la liste <code>exercices</code>, dans l'ordre des onglets.</p>
 <table>
 <thead>
 <tr>
@@ -330,7 +357,7 @@ footer { margin-top: 48px; color: var(--doux); font-size: 0.9rem; }
 </tr>
 </tbody>
 </table>
-<p>Le message « L'exercice n'a pas pu se charger : le site qui contient les fichiers de l'exercice ne répond pas » veut dire autre chose : GitHub ne répond pas, ou le nom du fichier d'exercices dans <code>index.html</code> ne correspond pas au fichier du dossier <code>data</code>.</p>
+<p>Le message « L'exercice n'a pas pu se charger : le site qui contient les fichiers de l'exercice ne répond pas » veut dire autre chose : GitHub ne répond pas, ou <code>exercices</code> dans <code>serie.js</code> ne correspond pas au nom du fichier du dossier <code>data</code>.</p>
 <p>Avant de mettre la série dans Moodle, faites ce contrôle pour chaque exercice :</p>
 <ul>
 <li>la solution collée dans l'éditeur donne tous les critères en vert ;</li>
