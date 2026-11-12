@@ -45,7 +45,7 @@ footer { margin-top: 48px; color: var(--doux); font-size: 0.9rem; }
 <p class="sous-titre">Faire une nouvelle série d'exercices Python à partir d'un zip de série existant, sans rien changer sur GitHub : on change seulement <code>serie.js</code> et le fichier d'exercices.</p>
 <nav class="sommaire"><strong>Sommaire</strong><ol><li><a href="#le-principe">Le principe</a></li><li><a href="#serie-js">Les réglages : serie.js</a></li><li><a href="#etapes">Étapes</a></li><li><a href="#le-fichier-dexercices">Le fichier d'exercices</a></li><li><a href="#les-verifications">Les vérifications</a></li><li><a href="#pieges-frequents">Pièges fréquents</a></li></ol></nav>
 <h2 id="le-principe">Le principe</h2>
-<p>Un zip de série ne contient que 5 fichiers. Tout le reste (moteur Python, tortue, éditeur, vérification, envoi des résultats, styles) est chargé depuis GitHub : <code>https://scormcdg.github.io/python/script/pyodide/v1/</code> (Pyodide, le vrai Python) ou <code>https://scormcdg.github.io/python/script/v1/</code> (Skulpt, l'ancienne version).</p>
+<p>Un zip de série ne contient que 5 fichiers. Tout le reste (moteur Python, tortue, éditeur, vérification, envoi des résultats, styles) est chargé depuis GitHub : <code>https://scormcdg.github.io/python/script/pyodide/v1/</code> (Pyodide, le vrai Python, par défaut) ou <code>https://scormcdg.github.io/python/script/v1/</code> (Skulpt, l'ancienne version, si <code>serie.js</code> le demande).</p>
 <table>
 <thead>
 <tr>
@@ -89,7 +89,7 @@ footer { margin-top: 48px; color: var(--doux); font-size: 0.9rem; }
   titre: "Série 06 – Les listes",      // en haut de la page et dans l'onglet du navigateur
   id: "serie06",                       // différent pour chaque série
   exercices: "data/serie06.js",        // le fichier d'exercices
-  python: "pyodide",                   // "pyodide" (le vrai Python) ou "skulpt" (l'ancienne version)
+  python: "pyodide",                   // facultatif : "pyodide" par défaut, "skulpt" pour l'ancienne version
   neon: "postgresql://serie_eleve:MOTDEPASSE@ep-xxxx-pooler…neon.tech/neondb?sslmode=require&amp;channel_binding=require",
   table: "resultats_series",           // table de Neon où les résultats sont ajoutés
   cle: "MIIBIjANBgkqh…",               // clé publique qui chiffre le login et le nom de l'élève
@@ -102,7 +102,7 @@ footer { margin-top: 48px; color: var(--doux); font-size: 0.9rem; }
 <tr><td><code>titre</code></td><td>titre affiché ; il remplace celui du fichier d'exercices</td></tr>
 <tr><td><code>id</code></td><td>sert à retrouver le travail des élèves : <strong>différent pour chaque série</strong>, et à ne plus changer une fois la série utilisée (sinon les élèves repartent de zéro)</td></tr>
 <tr><td><code>exercices</code></td><td>chemin du fichier d'exercices dans le paquet</td></tr>
-<tr><td><code>python</code></td><td><code>"pyodide"</code> ou <code>"skulpt"</code> ; c'est la seule différence entre les deux versions d'une série</td></tr>
+<tr><td><code>python</code></td><td>facultatif : <strong>Pyodide par défaut</strong> (le vrai Python) ; <code>"skulpt"</code> pour l'ancienne version. C'est la seule différence entre les deux versions d'une série</td></tr>
 <tr><td><code>neon</code></td><td>code Neon du rôle qui ajoute les résultats ; <code>null</code> : pas de bouton « Envoyer mes résultats »</td></tr>
 <tr><td><code>table</code></td><td><code>"resultats_series"</code> pour une série, <code>"resultats_exam"</code> pour une évaluation</td></tr>
 <tr><td><code>cle</code></td><td>clé publique de chiffrement, <strong>la même dans toutes les séries</strong> (sinon le viewer ne peut pas lire les noms)</td></tr>
@@ -115,7 +115,7 @@ footer { margin-top: 48px; color: var(--doux); font-size: 0.9rem; }
 <h2 id="etapes">Étapes</h2>
 <p>L'exemple fait une série 06 à partir de la série 05.</p>
 <ol>
-<li><strong>Copier une série existante.</strong> Décompressez <code>serie05-pyodide-scorm-leger.zip</code> (ou la version Skulpt) dans un nouveau dossier, par exemple <code>serie06/</code>. Prenez de préférence une série proche de celle que vous voulez faire : ses exercices serviront de modèles.</li>
+<li><strong>Copier une série existante.</strong> Décompressez <code>serie05-pyodide-scorm-leger.zip</code> dans un nouveau dossier, par exemple <code>serie06/</code>. Prenez de préférence une série proche de celle que vous voulez faire : ses exercices serviront de modèles.</li>
 <li><strong>Renommer le fichier d'exercices.</strong> <code>data/serie05.js</code> devient <code>data/serie06.js</code>.</li>
 <li><strong>Modifier <code>serie.js</code></strong> : <code>titre</code>, <code>id</code> (<code>"serie06"</code>) et <code>exercices</code> (<code>"data/serie06.js"</code>). Le reste peut rester tel quel.</li>
 <li><strong>Écrire les exercices</strong> dans <code>data/serie06.js</code> (voir la partie suivante). Mettez aussi en haut du fichier le même <code>id</code> et le même <code>titre</code> que dans <code>serie.js</code> : ce sont ceux de <code>serie.js</code> qui comptent, mais le fichier reste ainsi lisible seul.</li>
