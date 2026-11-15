@@ -533,24 +533,33 @@
         animate(r.programPath);
         if (r.error) showError(r.error);
         else showOutput(r.output);
-
-        state.essais[ex.id] = (state.essais[ex.id] || 0) + 1;
-        if (r.ok && !state.valide[ex.id]) state.valide[ex.id] = true;
-
-        Scorm.recordInteraction({
-          id: ex.id,
-          description: ex.titre + " – essai " + state.essais[ex.id],
-          response: code,
-          correct: r.ok
-        });
-        renderCriteria(r);
-        buildTabs();
-        updateResult();
-        saveNow();
-        Scorm.commit();
-        dirty = false;
+        recordResult(ex.id, r.ok, code, r);
       });
     });
+  }
+
+  /* Validation générique pour tous les types d'exercices (Python ou HTML/JS) */
+  function recordResult(exId, ok, response, resultObj) {
+    var ex = SERIE.exercices.find(function (e) { return e.id === exId; });
+    if (!ex || !ex.note) return;
+    state.essais[exId] = (state.essais[exId] || 0) + 1;
+    if (ok && !state.valide[exId]) state.valide[exId] = true;
+
+    Scorm.recordInteraction({
+      id: exId,
+      description: ex.titre + " – essai " + state.essais[exId],
+      response: response || "",
+      correct: ok
+    });
+
+    if (current && current.id === exId) {
+      renderCriteria(resultObj || { ok: ok, results: [], error: null });
+    }
+    buildTabs();
+    updateResult();
+    saveNow();
+    Scorm.commit();
+    dirty = false;
   }
 
   /*
@@ -808,6 +817,17 @@
     show(state.courant);
     if (SERIE.fichiers || (!graded.length && SERIE.exercices.length === 1)) modeBacASable();
   }
+
+  /* API publique pour les exercices HTML/JS externes (QCM, drag-and-drop, etc.) */
+  window.APP = {
+    submit: function (exId, ok, details) {
+      recordResult(exId, ok, JSON.stringify(details || []), {
+        ok: ok,
+        results: details || [],
+        error: null
+      });
+    }
+  };
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
   else init();
