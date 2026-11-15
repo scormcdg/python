@@ -156,6 +156,10 @@
         : nOk + " critère(s) rempli(s) sur " + result.results.length + ". Lisez les indications ci-dessous.";
     }
 
+    if (!current.checks || !current.checks.length) {
+      // Pas de checks définis (ex: exercice HTML/JS pur) : bilan global suffit
+      return;
+    }
     current.checks.forEach(function (c) {
       var r = result && !result.error ? result.results.find(function (x) { return x.id === c.id; }) : null;
       var li = document.createElement("li");
