@@ -405,11 +405,11 @@
       var lVal = ctx.measureText(val).width;
       var l = Math.max(34, lVal + 14, lNom + 4);
       if (x + l > this.w - 8 && x > 8) { x = 8; y += ligne; }
-      // nom
+      // nom, centré au-dessus de la boîte
       ctx.font = "12px system-ui, sans-serif";
       ctx.fillStyle = "#1d2b53";
-      ctx.textAlign = "left";
-      ctx.fillText(nom, x + 1, y + hNom / 2);
+      ctx.textAlign = "center";
+      ctx.fillText(nom, x + l / 2, y + hNom / 2);
       // boîte
       ctx.fillStyle = "rgba(255, 255, 255, 0.92)";
       ctx.strokeStyle = "#2a4ba0";
