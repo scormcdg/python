@@ -23,6 +23,8 @@ Environ 12 Mo la première fois, gardés ensuite par le navigateur. Python tourn
 - `js/jeu.js` : le jeu Robi (lance une partie, renvoie les événements) ; `js/jeu-app.js`, `js/jeu-dessin.js` :
   comme dans `script/v1/`, avec en plus les variables du programme affichées en haut à gauche pendant l'animation
   (le nom au-dessus d'une boîte avec la valeur ; enregistrées à chaque commande par `py/robi.py`)
+- Robi : bouton « Envoyer mes résultats » si le `serie.js` du paquet donne une adresse Neon (comme les séries) ;
+  chaque niveau est vérifié à nouveau, `tests` vaut `[1]` (réussi) ou `[0]`, avec le code de l'élève
 - `js/turtle.js` : reçoit l'enregistrement de la tortue (`TurtleRec`) pour le dessin et la vérification
 
 `input()` met le programme en pause pendant que l'élève répond (JSPI). Il faut un navigateur récent :

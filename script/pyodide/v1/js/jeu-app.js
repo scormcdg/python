@@ -251,50 +251,62 @@
     });
   }
 
+  /*
+   * Contrôle d'un niveau (bouton Vérifier, envoi des résultats) : le programme sur le terrain premier,
+   * puis sur d'autres terrains tous différents si le niveau est aléatoire, et la limite de lignes.
+   * Résout { ok, resultats: { coffre, lignes }, echec: { r, k } ou null, derniere }.
+   */
+  function controler(niveau, code, premier) {
+    var n = niveau.aleatoire ? TIRAGES : 1;
+    var mondes = [];
+    // terrains tous différents (tant que c'est possible) : pas de « coup de chance » avec un programme écrit par cœur
+    var cle = function (m) { return niveau.variante ? String(niveau.variante(m)) : JSON.stringify(m); };
+    var vus = {};
+    vus[cle(premier)] = true;
+    mondes.push(premier);
+    while (mondes.length < n) {
+      var m = null;
+      for (var essai = 0; essai < 200; essai++) {
+        m = niveau.monde(Jeu.hasard(graine()));
+        if (!vus[cle(m)]) break;
+      }
+      vus[cle(m)] = true;
+      mondes.push(m);
+    }
+    var res = { resultats: {}, ok: false, echec: null, derniere: null };
+    var chain = Promise.resolve();
+    mondes.forEach(function (m, k) {
+      chain = chain.then(function () {
+        if (res.echec) return;
+        return Jeu.jouer(code, m, niveau.commandes).then(function (r) {
+          res.derniere = r;
+          if (!r.ok) res.echec = { r: r, k: k };
+        });
+      });
+    });
+    return chain.then(function () {
+      var lignes = Jeu.compterLignes(code);
+      res.resultats.lignes = { ok: lignes <= niveau.maxLignes,
+        message: "Votre programme fait " + lignes + " lignes : il faut trouver une façon plus courte de l'écrire." };
+      if (res.echec) {
+        var b = bilanPartie(res.echec.r);
+        res.resultats.coffre = { ok: false, message: (n > 1 && res.echec.k > 0 ? "Sur un autre terrain (tirage " + (res.echec.k + 1) + ") : " : "") + b.texte };
+      } else {
+        res.resultats.coffre = { ok: true };
+      }
+      res.ok = res.resultats.coffre.ok && res.resultats.lignes.ok;
+      return res;
+    });
+  }
+
   function verifier() {
     if (busy) return;
     var niveau = current, code = editor.getValue();
     clearError();
     hideConsole();
     exclusive(function () {
-      var n = niveau.aleatoire ? TIRAGES : 1;
-      var mondes = [];
-      // terrains tous différents (tant que c'est possible) : pas de « coup de chance » avec un programme écrit par cœur
-      var cle = function (m) { return niveau.variante ? String(niveau.variante(m)) : JSON.stringify(m); };
-      var vus = {};
-      vus[cle(mondeAffiche)] = true;
-      mondes.push(mondeAffiche);
-      while (mondes.length < n) {
-        var m = null;
-        for (var essai = 0; essai < 200; essai++) {
-          m = niveau.monde(Jeu.hasard(graine()));
-          if (!vus[cle(m)]) break;
-        }
-        vus[cle(m)] = true;
-        mondes.push(m);
-      }
-      var res = { resultats: {}, ok: false }, echec = null, derniere = null;
-      var chain = Promise.resolve();
-      mondes.forEach(function (m, k) {
-        chain = chain.then(function () {
-          if (echec) return;
-          return Jeu.jouer(code, m, niveau.commandes).then(function (r) {
-            derniere = r;
-            if (!r.ok) echec = { r: r, k: k };
-          });
-        });
-      });
-      return chain.then(function () {
-        var lignes = Jeu.compterLignes(code);
-        res.resultats.lignes = { ok: lignes <= niveau.maxLignes,
-          message: "Votre programme fait " + lignes + " lignes : il faut trouver une façon plus courte de l'écrire." };
-        if (echec) {
-          var b = bilanPartie(echec.r);
-          res.resultats.coffre = { ok: false, message: (n > 1 && echec.k > 0 ? "Sur un autre terrain (tirage " + (echec.k + 1) + ") : " : "") + b.texte };
-        } else {
-          res.resultats.coffre = { ok: true };
-        }
-        res.ok = res.resultats.coffre.ok && res.resultats.lignes.ok;
+      return controler(niveau, code, mondeAffiche).then(function (res) {
+        var echec = res.echec, derniere = res.derniere;
         var montrer = echec ? echec.r : derniere;
         if (echec && echec.k > 0) { mondeAffiche = montrer.monde; }
         animer(montrer, function () {
@@ -408,6 +420,95 @@
 
   /* ---------------- Démarrage ---------------- */
 
+  /*
+   * « Envoyer mes résultats » (si serie.js donne une adresse Neon), comme dans les séries (js/app.js) :
+   * vérifie à nouveau chaque niveau avec le code actuel de l'élève (sur plusieurs terrains s'il est aléatoire,
+   * avec la limite de lignes), puis ajoute un JSON dans la table de Neon donnée par serie.js :
+   * { serie, titre, eleve_chiffre, date, python, exercices: [{ id, titre, code, tests: [1] ou [0] }] }
+   * tests : [1] si le niveau est réussi, [0] sinon. eleve_chiffre : login et nom Moodle chiffrés (clé publique cle).
+   */
+  function identite(login, nom) {
+    var enc = new TextEncoder(), n = String(nom || ""), t;
+    do {
+      t = enc.encode(JSON.stringify({ login: String(login), nom: n }));
+      if (t.length <= 190) return t;
+      n = n.slice(0, -1);
+    } while (n.length);
+    return enc.encode(JSON.stringify({ login: String(login).slice(0, 150), nom: "" }));
+  }
+
+  function chiffrer(clePublique, login, nom) {
+    var der = Uint8Array.from(atob(clePublique), function (c) { return c.charCodeAt(0); });
+    return crypto.subtle.importKey("spki", der, { name: "RSA-OAEP", hash: "SHA-256" }, false, ["encrypt"]).then(function (k) {
+      return crypto.subtle.encrypt({ name: "RSA-OAEP" }, k, identite(login, nom));
+    }).then(function (c) {
+      return btoa(String.fromCharCode.apply(null, new Uint8Array(c)));
+    });
+  }
+
+  function boutonEnvoyer(reglages) {
+    var b = document.createElement("button");
+    b.type = "button";
+    b.id = "btn-envoyer";
+    b.className = "bouton secondaire";
+    b.textContent = "Envoyer mes résultats";
+    var msg = document.createElement("span");
+    msg.className = "envoi-message";
+    msg.setAttribute("role", "status");
+    var p = $("progression");
+    p.parentNode.insertBefore(b, p.nextSibling);
+    p.parentNode.insertBefore(msg, b.nextSibling);
+    function dire(t, ok) { msg.textContent = t; msg.style.color = ok === false ? "#b3261e" : ok ? "#1e7a3c" : ""; }
+
+    b.addEventListener("click", function () {
+      if (busy || b.disabled) return;
+      var moodle = Scorm.learner(), login = moodle.id, nom = moodle.nom;
+      if (!login) {
+        // hors Moodle (test du paquet)
+        login = (window.prompt("Votre nom :") || "").trim();
+        if (!login) return;
+        nom = login;
+      }
+      if (!window.crypto || !crypto.subtle) { dire("L'envoi n'est pas possible dans ce navigateur.", false); return; }
+      if (!reglages.cle) { dire("Envoi impossible : il manque la clé (cle) dans serie.js.", false); return; }
+      var table = reglages.table || "reponses";
+      if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(table)) { dire("Nom de table incorrect dans serie.js : " + table, false); return; }
+      if (current) state.code[current.id] = editor.getValue();
+      var envoi = {
+        serie: SERIE.id, titre: SERIE.titre,
+        date: new Date().toISOString(), python: reglages.python || "pyodide", exercices: []
+      };
+      b.disabled = true;
+      exclusive(function () {
+        var suite = chiffrer(reglages.cle, login, nom).then(function (c) { envoi.eleve_chiffre = c; });
+        NIVEAUX.forEach(function (niveau, i) {
+          suite = suite.then(function () {
+            dire("Vérification des niveaux… (" + (i + 1) + " sur " + NIVEAUX.length + ")");
+            var code = state.code[niveau.id] != null ? state.code[niveau.id] : (niveau.code || "");
+            var titre = "Niveau " + (i + 1) + " – " + niveau.titre;
+            return controler(niveau, code, niveau.monde(Jeu.hasard(graine()))).then(function (res) {
+              envoi.exercices.push({ id: niveau.id, titre: titre, code: code, tests: [res.ok ? 1 : 0] });
+            }, function () {
+              envoi.exercices.push({ id: niveau.id, titre: titre, code: code, tests: [0] });
+            });
+          });
+        });
+        return suite.then(function () {
+          dire("Envoi…");
+          return import("https://esm.sh/@neondatabase/serverless@1").then(function (m) {
+            return m.neon(reglages.neon).query("INSERT INTO " + table + " (data) VALUES ($1::jsonb)", [JSON.stringify(envoi)]);
+          });
+        }).then(function () {
+          var t = new Date();
+          dire("Résultats envoyés à " + t.getHours() + "h" + (t.getMinutes() < 10 ? "0" : "") + t.getMinutes() + " ✓", true);
+        }, function (e) {
+          console.error(e);
+          dire("L'envoi n'a pas marché (" + (e && e.message || e) + "). Vérifiez la connexion et réessayez.", false);
+        });
+      }).then(function () { b.disabled = false; });
+    });
+  }
+
   function init() {
     state = Scorm.start(SERIE.id) || {};
     state.v = 1;
@@ -453,6 +554,8 @@
     $("btn-memo").addEventListener("click", function () { fenetre("Mémo de programmation", SERIE.memo); });
     boutonPleinEcran();
     boutonScene();
+    var reglages = window.SERIE_REGLAGES || {};
+    if (reglages.neon) boutonEnvoyer(reglages);
 
     setInterval(function () { if (dirty) { saveNow(); Scorm.commit(); dirty = false; } }, 30000);
     var closed = false;
