@@ -60,7 +60,7 @@
     // autorisees : commandes permises dans ce niveau (null = toutes)
     return global.PyEngine.run(code, null, { robi: { monde: depart, autorisees: autorisees || null } }).then(function (r) {
       // r.robi est null si Python a été arrêté (temps dépassé) : Robi n'a alors rien fait
-      var p = r.robi || { evenements: [], final: { x: depart.depart, dir: depart.dir, cle: false, ouvert: false } };
+      var p = r.robi || { evenements: [], final: { x: depart.depart, dir: depart.dir, cle: false, ouvert: false, vars: [] } };
       return {
         ok: !r.error && p.final.ouvert,
         erreur: r.error,

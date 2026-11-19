@@ -286,6 +286,7 @@
     this.stop();
     this.monde = monde;
     this.evenements = [];
+    this.varsFinales = null;
     this.preparer(monde);
     this.image(monde, etatInitial(monde));
   };
@@ -302,6 +303,8 @@
     this.monde = monde;
     this.evenements = evenements;
     this.dureeMax = options.dureeMax || 0;
+    // variables à la fin du programme (options.varsFinales) ; gardées pour redessiner (changement de taille)
+    if (Object.prototype.hasOwnProperty.call(options, "varsFinales")) this.varsFinales = options.varsFinales || null;
     this.preparer(monde);
     var s = etatInitial(monde), i = 0, t = 0, last = null;
     var vitesse = function () { var v = self.opts.getSpeed ? self.opts.getSpeed() : 6; return v; };
@@ -329,6 +332,8 @@
       if (evenements.length && evenements[evenements.length - 1].t === "echec") signalerEchec();
       self.frame = null; self.finir = null;
       self.image(monde, s);
+      var dernier = evenements.length ? evenements[evenements.length - 1].vars : null;
+      self.dessinerVariables(self.varsFinales || dernier);
       if (options.onDone) options.onDone();
     }
     this.finir = finir;
@@ -347,6 +352,7 @@
       var e = evenements[i], f = Math.min(1, t / Math.max(duree(e), 1e-6));
       if (e.t === "echec") signalerEchec();
       self.imageEnCours(monde, s, e, f);
+      self.dessinerVariables(e.vars);
       self.frame = global.requestAnimationFrame(tick);
     }
     this.frame = global.requestAnimationFrame(tick);
@@ -380,6 +386,45 @@
     if (e.t === "regarder") this.bulle(s.x, s.y, String(e.valeur), "#56607a");
     if (e.t === "ouvrir" && f > 0.4) { s.ouvert = true; this.fond(monde, s); this.dessinerRobot(r.x, r.y, r.dir, { cle: s.cle }); s.ouvert = false; }
     if (e.t === "echec" && (e.type !== "vide" || f > 0.5)) this.bulle(s.x, s.y, "Aïe !", COULEURS.echec);
+  };
+
+  /*
+   * Variables du programme, en haut à gauche : le nom au-dessus d'une boîte qui contient la valeur.
+   * vars : [[nom, texte], …] (enregistrées à chaque commande par js/jeu.js ou py/robi.py).
+   */
+  DessinJeu.prototype.dessinerVariables = function (vars) {
+    if (!vars || !vars.length) return;
+    var ctx = this.ctx, x = 8, y = 6, hNom = 13, hBoite = 22, ecart = 8, ligne = hNom + hBoite + 6;
+    ctx.save();
+    ctx.textBaseline = "middle";
+    for (var i = 0; i < vars.length; i++) {
+      var nom = String(vars[i][0]), val = String(vars[i][1]);
+      ctx.font = "12px system-ui, sans-serif";
+      var lNom = ctx.measureText(nom).width;
+      ctx.font = "bold 14px ui-monospace, Consolas, monospace";
+      var lVal = ctx.measureText(val).width;
+      var l = Math.max(34, lVal + 14, lNom + 4);
+      if (x + l > this.w - 8 && x > 8) { x = 8; y += ligne; }
+      // nom
+      ctx.font = "12px system-ui, sans-serif";
+      ctx.fillStyle = "#1d2b53";
+      ctx.textAlign = "left";
+      ctx.fillText(nom, x + 1, y + hNom / 2);
+      // boîte
+      ctx.fillStyle = "rgba(255, 255, 255, 0.92)";
+      ctx.strokeStyle = "#2a4ba0";
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      if (ctx.roundRect) ctx.roundRect(x, y + hNom + 1, l, hBoite, 4); else ctx.rect(x, y + hNom + 1, l, hBoite);
+      ctx.fill(); ctx.stroke();
+      // valeur
+      ctx.font = "bold 14px ui-monospace, Consolas, monospace";
+      ctx.fillStyle = "#1e2430";
+      ctx.textAlign = "center";
+      ctx.fillText(val, x + l / 2, y + hNom + 1 + hBoite / 2 + 0.5);
+      x += l + ecart;
+    }
+    ctx.restore();
   };
 
   global.DessinJeu = DessinJeu;

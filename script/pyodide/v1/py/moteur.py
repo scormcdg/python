@@ -202,7 +202,7 @@ def _lancer(texte):
     if ns is not None:
         res["fonctions"] = _fonctions(ns)
     if robi is not None:
-        res["robi"] = robi._etat()
+        res["robi"] = robi._etat(ns)
         robi._partie = None
     texte = json.dumps(res)
     t = _tortue()

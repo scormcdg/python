@@ -21,7 +21,8 @@ Environ 12 Mo la première fois, gardés ensuite par le navigateur. Python tourn
 - `vendor/pyodide/` : Pyodide (seulement le cœur : pas de numpy ni pandas, inutiles pour la tortue)
 - `py/robi.py` : les commandes du jeu Robi, en Python (mêmes règles et mêmes messages que `script/v1/js/jeu.js`)
 - `js/jeu.js` : le jeu Robi (lance une partie, renvoie les événements) ; `js/jeu-app.js`, `js/jeu-dessin.js` :
-  copies identiques de `script/v1/` (même page de jeu, même animation)
+  comme dans `script/v1/`, avec en plus les variables du programme affichées en haut à gauche pendant l'animation
+  (le nom au-dessus d'une boîte avec la valeur ; enregistrées à chaque commande par `py/robi.py`)
 - `js/turtle.js` : reçoit l'enregistrement de la tortue (`TurtleRec`) pour le dessin et la vérification
 
 `input()` met le programme en pause pendant que l'élève répond (JSPI). Il faut un navigateur récent :

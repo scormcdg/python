@@ -13,6 +13,8 @@
 
 import builtins
 import math
+import sys
+import types
 
 MAX_ACTIONS = 300  # la plus longue solution des niveaux en fait 64
 
@@ -40,13 +42,14 @@ def _nouvelle_partie(monde, autorisees):
     }
 
 
-def _etat():
-    """Événements et état final, renvoyés à la page."""
+def _etat(ns=None):
+    """Événements et état final (avec les variables du programme ns), renvoyés à la page."""
     p = _partie
     if p is None:
         return None
     return {"evenements": p["evenements"],
-            "final": {"x": p["x"], "dir": p["dir"], "cle": p["cle"], "ouvert": p["ouvert"]}}
+            "final": {"x": p["x"], "dir": p["dir"], "cle": p["cle"], "ouvert": p["ouvert"],
+                      "vars": _variables(ns) if ns is not None else []}}
 
 
 def _echec(message):
@@ -58,7 +61,40 @@ def _noter(ev):
     _partie["actions"] += 1
     if _partie["actions"] > MAX_ACTIONS:
         raise _echec("a fait plus de " + str(MAX_ACTIONS) + " actions : y a-t-il une boucle qui ne s'arrête jamais ?")
+    ev["vars"] = _variables()
     _partie["evenements"].append(ev)
+
+
+# Variables du programme (niveau principal) au moment d'une commande : [[nom, valeur écrite comme en Python], …]
+# dans l'ordre de création. Les commandes (def), modules et noms en _ ne sont pas montrés (comme dans js/jeu.js).
+_MAX_VARIABLES = 12
+_MAX_TEXTE = 14
+
+
+def _texte_court(t):
+    return t if len(t) <= _MAX_TEXTE else t[:_MAX_TEXTE - 1] + "…"
+
+
+def _variables(ns=None):
+    if ns is None:
+        f = sys._getframe(1)
+        while f is not None and f.f_code.co_filename != "<programme>":
+            f = f.f_back
+        if f is None:
+            return []
+        ns = f.f_globals
+    out = []
+    for nom, v in list(ns.items()):
+        if len(out) >= _MAX_VARIABLES:
+            break
+        if nom.startswith("_") or callable(v) or isinstance(v, (types.ModuleType, type)):
+            continue
+        try:
+            texte = repr(v)
+        except Exception:
+            continue
+        out.append([nom, _texte_court(texte)])
+    return out
 
 
 def _devant():

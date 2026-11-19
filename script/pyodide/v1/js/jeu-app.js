@@ -172,6 +172,7 @@
     function message() { if (!fait && apres) { fait = true; apres(); } }
     dessin.rejouer(r.monde, r.evenements, {
       dureeMax: arreteParLimite(r) ? DUREE_MAX_BOUCLE : 0,
+      varsFinales: (r.final && r.final.vars) || null,
       onEchec: message,
       onDone: function () { $("btn-finir").hidden = true; message(); }
     });
