@@ -34,6 +34,9 @@ th { background: #eef1f8; }
 .nuancier { display: flex; flex-wrap: wrap; gap: 8px; margin: 6px 0 10px; }
 .nuancier span { display: inline-flex; align-items: center; gap: 6px; background: var(--papier); border: 1px solid var(--bordure); border-radius: 6px; padding: 3px 9px 3px 4px; font: 14px var(--mono); }
 .nuancier i { display: inline-block; width: 22px; height: 22px; border-radius: 4px; border: 1px solid rgba(0,0,0,.25); }
+figure.couleurs { margin: 8px 0 14px; }
+figure.couleurs img { max-width: 100%; height: auto; border: 1px solid var(--bordure); border-radius: 6px; background: #fff; }
+figure.couleurs figcaption { color: var(--doux); font-size: 0.92rem; margin-top: 4px; }
 footer { margin-top: 48px; color: var(--doux); font-size: 0.9rem; }
 @media (max-width: 600px) { nav.sommaire ol { columns: 1; } body { font-size: 16px; } }
 @media print { pre .copier, nav.sommaire { display: none; } body { background: #fff; } }
@@ -201,7 +204,9 @@ forward(100)
 <span><i style="background:#90ee90"></i>"lightgreen"</span>
 </div>
 
-<p>Beaucoup d'autres noms anglais existent.</p>
+<p>Beaucoup d'autres noms anglais existent. Voici la liste complète :</p>
+<figure class="couleurs"><a href="img/couleurs.png" target="_blank"><img src="img/couleurs.png" alt="Tableau des noms de couleurs anglais avec leur échantillon" width="866" height="857" loading="lazy"></a>
+<figcaption>Attention : 9 noms du tableau ne marchent pas ici et donnent « Couleur invalide » : <code>"silver"</code>, <code>"olive"</code>, <code>"lime"</code>, <code>"teal"</code>, <code>"aqua"</code>, <code>"indigo"</code>, <code>"fuchsia"</code>, <code>"crimson"</code> et <code>"rebeccapurple"</code>. Pour ces couleurs, utilisez le code hexadécimal, par exemple <code>"#dc143c"</code> pour crimson.</figcaption></figure>
 <h3 id="le-code-hexadecimal">Le code hexadécimal</h3>
 <p><code>#rrggbb</code> donne la quantité de rouge, de vert et de bleu, chacune avec deux chiffres de <code>00</code> (rien) à <code>ff</code> (tout). Ainsi <code>"#ff0000"</code> est rouge, <code>"#00ff00"</code> vert, <code>"#000000"</code> noir et <code>"#ffffff"</code> blanc. La forme courte <code>#rgb</code> double chaque chiffre : <code>"#f80"</code> = <code>"#ff8800"</code>.</p>
 <h3 id="les-trois-nombres">Les trois nombres</h3>
