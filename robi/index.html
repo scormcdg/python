@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Robi l'explorateur</title>
+  <!-- Les réglages (titre, fichier des niveaux, version de Python, envoi des résultats…) sont dans serie.js -->
+  <script src="serie.js"></script>
+  <script src="charger.js"></script>
+</head>
+<body class="jeu">
+  <header class="entete">
+    <h1 id="titre-serie">Robi l'explorateur</h1>
+    <p id="progression" class="progression"></p>
+  </header>
+
+  <nav id="onglets" class="onglets" aria-label="Niveaux"></nav>
+
+  <main class="espace">
+    <div class="colonne-code">
+      <section class="enonce" aria-labelledby="titre-niveau">
+        <div class="boutons-aide">
+          <button id="btn-guide" type="button" class="bouton secondaire">Guide de démarrage</button>
+          <button id="btn-memo" type="button" class="bouton secondaire">Mémo de programmation</button>
+        </div>
+        <h2 id="titre-niveau"></h2>
+        <div id="objectif"></div>
+        <p id="contrainte" class="contrainte"></p>
+        <h4>Commandes de Robi disponibles</h4>
+        <ul id="commandes" class="commandes"></ul>
+        <button id="btn-indice" type="button" class="bouton discret">Afficher un indice</button>
+        <div id="indice" class="indice" hidden></div>
+      </section>
+
+      <div id="editeur" class="editeur"></div>
+
+      <div class="actions">
+        <button id="btn-executer" type="button" class="bouton principal">Exécuter <kbd>Ctrl+Entrée</kbd></button>
+        <button id="btn-verifier" type="button" class="bouton secondaire">Vérifier</button>
+        <button id="btn-recommencer" type="button" class="bouton discret">Recommencer</button>
+      </div>
+    </div>
+
+    <div class="colonne-scene">
+      <div class="feuille scene">
+        <canvas id="canvas-jeu" aria-label="Le terrain de Robi"></canvas>
+      </div>
+      <div class="vitesse">
+        <label for="vitesse">Vitesse</label>
+        <input id="vitesse" type="range" min="1" max="11" step="1" value="6">
+        <output id="vitesse-valeur" for="vitesse"></output>
+        <button id="btn-finir" type="button" class="bouton discret" hidden>Terminer l'animation</button>
+        <button id="btn-terrain" type="button" class="bouton discret" hidden>Autre terrain</button>
+      </div>
+
+      <section class="zone-console">
+        <h3>Console</h3>
+        <div id="console" class="console vide" role="log" aria-live="polite"></div>
+      </section>
+
+      <section id="criteres" class="criteres">
+        <h3>Vérification</h3>
+        <p id="bilan" class="bilan" hidden></p>
+        <ul id="liste-criteres"></ul>
+      </section>
+    </div>
+  </main>
+
+  <footer id="pied" class="pied"></footer>
+</body>
+</html>
