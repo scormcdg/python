@@ -92,10 +92,14 @@
     if (this.bgColor) ctx.globalAlpha = 0.35; // quadrillage discret sur un fond coloré
     // Quadrillage de cahier : un carreau = 10 pas de tortue. Quand les carreaux deviennent
     // trop petits ou trop grands, on passe à une autre valeur ronde (1, 2, 5, 10, 20, 50…)
-    var UNITES = [1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000];
-    var unite = UNITES[UNITES.length - 1];
-    for (var i = 0; i < UNITES.length; i++) {
-      if (UNITES[i] * this.k >= 9) { unite = UNITES[i]; break; }
+    // Valeurs rondes sans limite (… 5000, 10000, 20000, 50000 …) : un dessin immense
+    // (par exemple cote *= 5 dans une boucle) garde des carreaux d'au moins 9 pixels,
+    // sinon la boucle ci-dessous tracerait des milliards de lignes et bloquerait la page.
+    var unite = 1;
+    if (!(this.k > 0) || !isFinite(this.k)) return ctx.restore();
+    while (unite * this.k < 9 && unite < 1e300) {
+      var c = String(unite)[0];
+      unite *= c === "2" ? 2.5 : 2;   // 1 → 2 → 5 → 10 → 20 → 50 …
     }
     if (unite < 10 && 10 * this.k < 40) unite = 10; // on garde 10 tant que les carreaux restent lisibles
     this.unite = unite;
@@ -241,7 +245,9 @@
       var n = speedOf(e);
       if (!n) return 0;
       if (e.turn) return Math.abs(e.to - e.from) / degPerSec(n);
-      return Math.hypot(e.x2 - e.x1, e.y2 - e.y1) / pxPerSec(n);
+      // un trait très long (plus de 2000 pas) s'anime comme un trait de 2000 pas :
+      // sinon la tortue mettrait des heures (ou des siècles) à le parcourir
+      return Math.min(Math.hypot(e.x2 - e.x1, e.y2 - e.y1), 2000) / pxPerSec(n);
     }
     function complete(e, i) {
       if (e.type) self.extra(inkCtx, e, path, i);
