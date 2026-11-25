@@ -245,9 +245,11 @@
       var n = speedOf(e);
       if (!n) return 0;
       if (e.turn) return Math.abs(e.to - e.from) / degPerSec(n);
-      // un trait très long (plus de 2000 pas) s'anime comme un trait de 2000 pas :
-      // sinon la tortue mettrait des heures (ou des siècles) à le parcourir
-      return Math.min(Math.hypot(e.x2 - e.x1, e.y2 - e.y1), 2000) / pxPerSec(n);
+      // Durée selon la longueur À L'ÉCRAN : quand un dessin trop grand est réduit (k < 1),
+      // ses traits s'animent à la vitesse de leur taille affichée (un trait devenu
+      // microscopique est instantané), et un trait ne dure jamais plus que 2000 pixels.
+      var k = self.k > 0 && self.k < 1 ? self.k : 1;
+      return Math.min(Math.hypot(e.x2 - e.x1, e.y2 - e.y1) * k, 2000) / pxPerSec(n);
     }
     function complete(e, i) {
       if (e.type) self.extra(inkCtx, e, path, i);
