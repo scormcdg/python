@@ -102,7 +102,21 @@ def _num(v, fname):
         else:
             ex = 100
         raise TypeError(fname + "() attend un nombre, par exemple " + fname + "(" + str(ex) + ")")
+    # nombre trop grand pour la tortue (plus de 10^308, ou infini) : message clair
+    # au lieu d'une erreur interne ou d'un OverflowError en anglais
+    try:
+        f = float(v)
+    except OverflowError:
+        f = float("inf")
+    if f != f or f in (float("inf"), float("-inf")):
+        raise ValueError(_trop_grand(fname))
     return float(v) if isinstance(v, float) else v
+
+
+def _trop_grand(fname):
+    nom = fname[:-1] if fname.endswith("2") else fname
+    return ("La tortue a reçu un nombre trop grand dans " + nom + "() : vérifiez le calcul "
+            "(une valeur multipliée à chaque tour, comme cote *= 5, devient vite gigantesque)")
 
 
 def _valid_color(c):

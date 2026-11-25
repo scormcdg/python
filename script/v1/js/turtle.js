@@ -124,8 +124,17 @@
     function js(v) { return Sk.ffi.remapToJs(v); }
     function py(v) { return Sk.ffi.remapToPy(v); }
     function absent(v) { return v === undefined || v === none; }
+    function tropGrand(fname) {
+      var nom = /2$/.test(fname) ? fname.slice(0, -1) : fname;
+      return new Sk.builtin.ValueError("La tortue a reçu un nombre trop grand dans " + nom + "() : vérifiez le calcul " +
+        "(une valeur multipliée à chaque tour, comme cote *= 5, devient vite gigantesque)");
+    }
     function num(v, fname) {
       var n = js(v);
+      // grand entier Python (10**400…) : converti en nombre, il devient Infinity
+      if (typeof n === "bigint") n = Number(n);
+      else if (typeof n === "string" && Sk.builtin.checkInt(v)) n = Number(n);
+      if (typeof n === "number" && (n === Infinity || n === -Infinity)) throw tropGrand(fname);
       if (typeof n !== "number" || isNaN(n)) {
         if (/2$/.test(fname)) {          // goto(x, y) : deux nombres
           fname = fname.slice(0, -1);
