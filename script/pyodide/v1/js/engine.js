@@ -813,9 +813,10 @@
       return "Dans ce cours, on écrit les commandes directement, sans « " + name + ". » devant" + where + " : écrivez " + pt[2] + "(…).";
     }
     var jamaisDefini = !new RegExp("^\\s*(" + name + "\\s*=(?!=)|def\\s+" + name + "\\b|for\\s+" + name + "\\s+in\\b)", "m").test(src);
-    // couleur sans guillemets : color(red)
+    // couleur sans guillemets : color(red) — seulement si le nom est vraiment une couleur
     var coul = new RegExp("\\b(color|pencolor|fillcolor|bgcolor|dot)\\s*\\([^)]*\\b" + name + "\\b").exec(lineText);
-    if (coul && jamaisDefini) {
+    var nomCouleur = !global.TURTLE_COLORS || Object.prototype.hasOwnProperty.call(global.TURTLE_COLORS, name.toLowerCase());
+    if (coul && jamaisDefini && nomCouleur) {
       return "Pour une couleur, il faut des guillemets" + where + " : " + coul[1] + "(\"" + name + "\").";
     }
     // texte sans guillemets : print(Bonjour)
@@ -849,7 +850,13 @@
       }
     }
     var guess = similarName(name, code);
-    var tip = guess ? " Vouliez-vous écrire « " + guess + " » ?" : "";
+    var tip = guess ? " Vouliez-vous écrire « " + guess + " » ?" +
+      (guess.toLowerCase() === name.toLowerCase() ? " Python fait la différence entre majuscules et minuscules." : "") : "";
+    // dans color(…), un nom inconnu qui ne ressemble à rien : peut-être une couleur sans guillemets
+    if (coul && jamaisDefini && !guess && !isCall) {
+      return "La variable « " + name + " » n'existe pas" + where + ". Si c'est une couleur, mettez-la entre guillemets et en anglais : " +
+        coul[1] + "(\"red\"), " + coul[1] + "(\"blue\")…";
+    }
 
     if (isCall) {
       if (defLine) {
