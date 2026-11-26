@@ -264,13 +264,15 @@ window.SERIE = {
       titre: "Le terrain inconnu",
       objectif:
         "<p>Pas de panneaux : Robi doit observer lui-même ce qu'il y a devant lui. " +
-        "Il y a parfois une marche à monter, parfois un trou à descendre, parfois une caisse.</p>" +
+        "Il y a parfois une marche à monter (de hauteur 1, 2 ou 3), parfois un trou à descendre, parfois une caisse.</p>" +
         "<p>Le coffre est sur la dernière case, à 13 cases du départ. Le terrain change à chaque essai.</p>",
       maxLignes: 9,
       commandes: ["avancer", "sauter", "frapper", "ouvrir", "hauteur_devant", "obstacle_devant"],
-      indice: "<p><code>hauteur_devant()</code> donne un nombre : plus grand que 0 s'il faut monter. " +
+      indice: "<p><code>hauteur_devant()</code> donne un nombre : la hauteur de la marche devant Robi, plus grande que 0 s'il faut monter. " +
+        "Ce nombre peut servir directement de valeur à <code>sauter()</code> : on peut le ranger dans une variable, " +
+        "<code>h = hauteur_devant()</code>, puis écrire <code>sauter(h)</code>. " +
         "<code>obstacle_devant()</code> donne <code>True</code> ou <code>False</code>. " +
-        "Une caisse se trouve toujours sur une case de même hauteur, et toutes les marches à monter font 1.</p>",
+        "Une caisse se trouve toujours sur une case de même hauteur.</p>",
       aleatoire: true,
       code: "",
       monde: function (h) {
@@ -278,7 +280,8 @@ window.SERIE = {
         for (var i = 1; i <= 13; i++) {
           var t = h.choix(["plat", "monte", "monte", "descend", "caisse", "caisse"]);
           var y = sol[i - 1];
-          if (t === "monte") y += 1;
+          // marche de 1, 2 ou 3, sans dépasser une hauteur de 7
+          if (t === "monte") y = y >= 7 ? Math.max(0, y - h.entier(1, 2)) : y + h.entier(1, Math.min(3, 7 - y));
           else if (t === "descend") y = Math.max(0, y - h.entier(1, 2));
           else if (t === "caisse" && i < 13) caisses[i] = 1;
           sol.push(y);
